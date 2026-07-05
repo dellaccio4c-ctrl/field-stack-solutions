@@ -142,6 +142,14 @@ export async function CustomerDashboard({
                         <td className="px-4 py-3 text-right font-bold">
                           {money(Math.max(0, total - paid))}
                         </td>
+                        <td className="px-4 py-3 text-right">
+                          <a
+                            href={`/app/invoices/${inv.id}/pay`}
+                            className="bg-[#1f9d63] hover:opacity-90 text-white font-semibold rounded-lg px-3 py-1.5 text-xs transition"
+                          >
+                            Pay now
+                          </a>
+                        </td>
                       </tr>
                     );
                   })}

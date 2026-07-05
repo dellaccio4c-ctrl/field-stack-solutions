@@ -57,9 +57,17 @@ export function InvoiceActions({
         {(status === "sent" ||
           status === "partially_paid" ||
           status === "overdue") && (
-          <Btn onClick={() => setPayOpen(true)} disabled={busy} primary>
-            Record payment
-          </Btn>
+          <>
+            <a
+              href={`/app/invoices/${invoiceId}/pay`}
+              className="bg-[#1f9d63] hover:opacity-90 text-white font-semibold rounded-lg px-4 py-2 text-sm transition"
+            >
+              Pay online
+            </a>
+            <Btn onClick={() => setPayOpen(true)} disabled={busy} primary>
+              Record payment
+            </Btn>
+          </>
         )}
         {status !== "void" && status !== "paid" && (
           <Btn
