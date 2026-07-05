@@ -11,7 +11,7 @@ export default async function AccountPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name, email, role, employee_code, job_title, phone, territory, hire_date, preferred_name, personal_email"
+      "full_name, email, role, employee_code, job_title, phone, territory, hire_date, preferred_name, personal_email, legal_first_name, legal_last_name, notes"
     )
     .eq("id", user!.id)
     .single();
@@ -80,10 +80,18 @@ export default async function AccountPage() {
       </div>
 
       <ProfileForm
+        extended={["admin", "owner"].includes(profile?.role ?? "")}
         defaults={{
           preferred_name: profile?.preferred_name ?? "",
           phone: profile?.phone ?? "",
           personal_email: profile?.personal_email ?? "",
+          legal_first_name: profile?.legal_first_name ?? "",
+          legal_last_name: profile?.legal_last_name ?? "",
+          employee_code: profile?.employee_code ?? "",
+          job_title: profile?.job_title ?? "",
+          territory: profile?.territory ?? "",
+          hire_date: profile?.hire_date ?? "",
+          notes: profile?.notes ?? "",
         }}
       />
 
