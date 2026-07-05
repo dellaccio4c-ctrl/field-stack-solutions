@@ -63,9 +63,21 @@ export default function SitesMap({ sites }: { sites: SiteRow[] }) {
               {s.openWOs === 1 ? "" : "s"}
               <br />
               {s.customerId && (
-                <Link href={`/app/customers/${s.customerId}`}>
-                  Open customer →
-                </Link>
+                <>
+                  <Link href={`/app/customers/${s.customerId}`}>
+                    Open customer →
+                  </Link>
+                  {" · "}
+                </>
+              )}
+              {s.address && (
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Google Maps directions →
+                </a>
               )}
             </Popup>
           </Marker>

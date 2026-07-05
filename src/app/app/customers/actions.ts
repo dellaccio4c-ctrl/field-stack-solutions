@@ -37,23 +37,7 @@ export async function updateCustomer(id: string, formData: FormData) {
   return { error: null };
 }
 
-async function geocodeAddress(parts: (string | null)[]) {
-  const q = parts.filter(Boolean).join(", ");
-  if (!q) return null;
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=${encodeURIComponent(q)}`,
-      { headers: { "User-Agent": "FieldStackSolutions/1.0 (info@fieldstacksolutions.com)" } }
-    );
-    if (!res.ok) return null;
-    const results = (await res.json()) as { lat: string; lon: string }[];
-    return results.length
-      ? { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) }
-      : null;
-  } catch {
-    return null;
-  }
-}
+import { geocodeAddress } from "@/lib/geocode";
 
 export async function createLocation(customerId: string, formData: FormData) {
   const supabase = await createClient();
