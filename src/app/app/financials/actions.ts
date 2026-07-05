@@ -3,6 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
+export async function setApprovalThreshold(formData: FormData) {
+  const supabase = await createClient();
+  const raw = String(formData.get("threshold") ?? "").trim();
+  const threshold = raw ? parseFloat(raw) : null;
+  if (raw && (!Number.isFinite(threshold!) || threshold! < 0))
+    return { error: "Enter a valid dollar amount, or leave blank to disable." };
+
+  const { error } = await supabase
+    .from("company_settings")
+    .update({
+      estimate_approval_threshold: threshold,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", true);
+  if (error) return { error: error.message };
+  revalidatePath("/app/financials");
+  return { error: null };
+}
+
 export async function addExpense(formData: FormData) {
   const supabase = await createClient();
   const {

@@ -6,6 +6,7 @@ import { StatusBadge } from "../../status-badge";
 import { LineItemsEditor } from "./line-items-editor";
 import { EstimateActions } from "./estimate-actions";
 import { BackLink } from "../../back-link";
+import { ApprovalBanner } from "./approval-banner";
 
 export default async function EstimateDetailPage({
   params,
@@ -24,6 +25,24 @@ export default async function EstimateDetailPage({
     .single();
 
   if (!est) notFound();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user!.id)
+    .single();
+  const canApprove = Boolean(me && ["admin", "owner"].includes(me.role));
+
+  const { data: approver } = est.approved_by
+    ? await supabase
+        .from("profiles")
+        .select("full_name, preferred_name")
+        .eq("id", est.approved_by)
+        .single()
+    : { data: null };
 
   // If this estimate was converted, link forward to the invoice.
   const { data: resultingInvoice } = await supabase
@@ -84,6 +103,15 @@ export default async function EstimateDetailPage({
         </div>
         <EstimateActions estimateId={est.id} status={est.status} />
       </div>
+
+      <ApprovalBanner
+        estimateId={est.id}
+        approvalStatus={est.approval_status}
+        approverName={
+          approver ? approver.preferred_name || approver.full_name : null
+        }
+        canApprove={canApprove}
+      />
 
       <LineItemsEditor
         estimateId={est.id}

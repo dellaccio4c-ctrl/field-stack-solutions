@@ -50,8 +50,102 @@ export async function deleteEstimateItem(estimateId: string, itemId: string) {
   return { error: null };
 }
 
+// Returns an error string when the estimate needs (and lacks) admin approval.
+async function checkApprovalGate(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  estimateId: string
+): Promise<string | null> {
+  const { data: settings } = await supabase
+    .from("company_settings")
+    .select("estimate_approval_threshold")
+    .single();
+  const threshold = settings?.estimate_approval_threshold;
+  if (threshold == null) return null;
+
+  const { data: est } = await supabase
+    .from("estimates")
+    .select("approval_status, tax_rate, line_items(quantity, unit_price)")
+    .eq("id", estimateId)
+    .single();
+  if (!est) return "Estimate not found";
+  if (est.approval_status === "approved") return null;
+
+  const total =
+    (est.line_items ?? []).reduce(
+      (s: number, i: { quantity: number; unit_price: number }) =>
+        s + Number(i.quantity) * Number(i.unit_price),
+      0
+    ) *
+    (1 + Number(est.tax_rate));
+  if (total <= Number(threshold)) return null;
+
+  // Over threshold and not yet approved — is the actor senior enough?
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user!.id)
+    .single();
+  if (me && ["admin", "owner"].includes(me.role)) {
+    // Admin/Owner sending implicitly approves.
+    await supabase
+      .from("estimates")
+      .update({
+        approval_status: "approved",
+        approved_by: user!.id,
+        approved_at: new Date().toISOString(),
+      })
+      .eq("id", estimateId);
+    return null;
+  }
+
+  // Flag it pending so admins see it needs sign-off.
+  if (est.approval_status !== "pending") {
+    await supabase
+      .from("estimates")
+      .update({ approval_status: "pending" })
+      .eq("id", estimateId);
+    revalidatePath(`/app/estimates/${estimateId}`);
+  }
+  return `This estimate exceeds the $${Number(threshold).toLocaleString()} approval threshold — an Admin or Owner must approve it before it can be sent.`;
+}
+
+export async function approveEstimate(estimateId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user!.id)
+    .single();
+  if (!me || !["admin", "owner"].includes(me.role))
+    return { error: "Only Admins and Owners can approve estimates." };
+
+  const { error } = await supabase
+    .from("estimates")
+    .update({
+      approval_status: "approved",
+      approved_by: user!.id,
+      approved_at: new Date().toISOString(),
+    })
+    .eq("id", estimateId);
+  if (error) return { error: error.message };
+  revalidatePath(`/app/estimates/${estimateId}`);
+  return { error: null };
+}
+
 export async function setEstimateStatus(estimateId: string, status: string) {
   const supabase = await createClient();
+
+  if (status === "sent") {
+    const gate = await checkApprovalGate(supabase, estimateId);
+    if (gate) return { error: gate };
+  }
+
   const patch: Record<string, unknown> = { status };
   if (status === "sent") patch.sent_at = new Date().toISOString();
   if (status === "approved" || status === "declined")
@@ -84,6 +178,13 @@ export async function customerDecideEstimate(
 }
 
 export async function emailEstimate(estimateId: string) {
+  // The approval gate applies to emailing too — check BEFORE sending.
+  {
+    const supabase = await createClient();
+    const gate = await checkApprovalGate(supabase, estimateId);
+    if (gate) return { error: gate };
+  }
+
   const { buildEstimatePdf } = await import("@/lib/pdf/build");
   const { sendDocumentEmail } = await import("@/lib/email");
   const { money } = await import("@/lib/money");

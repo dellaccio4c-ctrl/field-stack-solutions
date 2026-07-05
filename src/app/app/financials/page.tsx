@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { money, subtotal } from "@/lib/money";
 import { ExportPanel } from "./export-panel";
 import { AddExpenseForm } from "./add-expense-form";
+import { ApprovalSettings } from "./approval-settings";
 
 export default async function FinancialsPage() {
   const supabase = await createClient();
@@ -17,6 +18,11 @@ export default async function FinancialsPage() {
     .single();
   const isXpress = me?.role === "xpress_pumping";
   if (me?.role !== "owner" && !isXpress) redirect("/app");
+
+  const { data: settings } = await supabase
+    .from("company_settings")
+    .select("estimate_approval_threshold")
+    .single();
 
   const [{ data: invoices }, { data: payments }, { data: expenses }, { data: customers }, { data: staff }] =
     await Promise.all([
@@ -88,6 +94,12 @@ export default async function FinancialsPage() {
       </div>
 
       <ExportPanel customers={customers ?? []} staff={staff ?? []} />
+
+      {!isXpress && (
+        <ApprovalSettings
+          currentThreshold={settings?.estimate_approval_threshold ?? null}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div>
