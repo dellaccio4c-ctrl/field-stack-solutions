@@ -24,51 +24,77 @@ export async function inviteUser(formData: FormData) {
     return {
       error:
         "User creation isn't configured yet. Add SUPABASE_SERVICE_ROLE_KEY to the environment (Supabase Dashboard → Project Settings → API keys → service_role).",
-      tempPassword: null,
+      inviteLink: null,
+      emailed: false,
     };
   }
 
   const rank = await actorRank();
   const role = String(formData.get("role") || "readonly") as UserRole;
   if (rank < 4)
-    return { error: "Only Admins and Owners can add team members.", tempPassword: null };
+    return {
+      error: "Only Admins and Owners can add team members.",
+      inviteLink: null,
+      emailed: false,
+    };
   // Owners may assign any level (including co-Owner); Admins only below themselves.
   if (rank < 5 && ROLE_RANK[role] >= rank)
     return {
       error: "You can only assign roles below your own access level.",
-      tempPassword: null,
+      inviteLink: null,
+      emailed: false,
     };
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const fullName = String(formData.get("full_name") ?? "").trim();
-  if (!email) return { error: "Email is required.", tempPassword: null };
+  const legalFirst = String(formData.get("legal_first_name") ?? "").trim();
+  const legalLast = String(formData.get("legal_last_name") ?? "").trim();
+  const fullName = `${legalFirst} ${legalLast}`.trim();
+  if (!email) return { error: "Email is required.", inviteLink: null, emailed: false };
 
-  // Random temporary password shown once to the admin.
-  const tempPassword = Array.from(crypto.getRandomValues(new Uint8Array(9)))
-    .map((b) => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"[b % 55])
-    .join("");
+  const { headers } = await import("next/headers");
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
 
   const admin = createAdminClient();
-  const { data: created, error: createErr } =
-    await admin.auth.admin.createUser({
+  const { data: linkData, error: linkErr } =
+    await admin.auth.admin.generateLink({
+      type: "invite",
       email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: { full_name: fullName },
+      options: {
+        data: { full_name: fullName },
+        redirectTo: `${origin}/auth/callback?next=/welcome`,
+      },
     });
-  if (createErr) return { error: createErr.message, tempPassword: null };
+  if (linkErr) return { error: linkErr.message, inviteLink: null, emailed: false };
 
-  // Profile row is created by DB trigger; set the assigned role via admin
-  // client (service role bypasses the self-change trigger safely — rank was
-  // validated above).
   const { error: roleErr } = await admin
     .from("profiles")
-    .update({ role, full_name: fullName })
-    .eq("id", created.user.id);
-  if (roleErr) return { error: roleErr.message, tempPassword: null };
+    .update({
+      role,
+      full_name: fullName,
+      legal_first_name: legalFirst || null,
+      legal_last_name: legalLast || null,
+      employee_code:
+        String(formData.get("employee_code") ?? "").trim() || null,
+    })
+    .eq("id", linkData.user.id);
+  if (roleErr) return { error: roleErr.message, inviteLink: null, emailed: false };
+
+  // Send the branded welcome email if email is configured;
+  // otherwise hand the link back for the admin to share manually.
+  const { sendWelcomeEmail, emailConfigured } = await import("@/lib/email");
+  let emailed = false;
+  if (emailConfigured()) {
+    const result = await sendWelcomeEmail({
+      to: email,
+      name: legalFirst || fullName,
+      link: linkData.properties.action_link,
+    });
+    emailed = !result.error;
+  }
 
   revalidatePath("/app/team");
-  return { error: null, tempPassword };
+  return { error: null, inviteLink: linkData.properties.action_link, emailed };
 }
 
 export async function changeRole(userId: string, role: UserRole) {
@@ -89,11 +115,16 @@ export async function updateEmployee(userId: string, formData: FormData) {
   if (rank < 4)
     return { error: "Only Admins and Owners can edit employee records." };
 
+  const legalFirst = String(formData.get("legal_first_name") ?? "").trim();
+  const legalLast = String(formData.get("legal_last_name") ?? "").trim();
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
     .update({
-      full_name: String(formData.get("full_name") ?? "").trim(),
+      legal_first_name: legalFirst || null,
+      legal_last_name: legalLast || null,
+      full_name: `${legalFirst} ${legalLast}`.trim(),
       employee_code: String(formData.get("employee_code") ?? "").trim() || null,
       job_title: String(formData.get("job_title") ?? "").trim() || null,
       phone: String(formData.get("phone") ?? "").trim() || null,

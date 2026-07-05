@@ -86,30 +86,44 @@ export async function createCustomerLogin(
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const fullName = String(formData.get("full_name") ?? "").trim();
-  if (!email) return { error: "Email is required.", tempPassword: null };
+  if (!email) return { error: "Email is required.", inviteLink: null, emailed: false };
 
-  const tempPassword = Array.from(crypto.getRandomValues(new Uint8Array(9)))
-    .map((b) => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"[b % 55])
-    .join("");
+  const { headers } = await import("next/headers");
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
 
   const admin = createAdminClient();
-  const { data: created, error: createErr } =
-    await admin.auth.admin.createUser({
+  const { data: linkData, error: linkErr } =
+    await admin.auth.admin.generateLink({
+      type: "invite",
       email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: { full_name: fullName },
+      options: {
+        data: { full_name: fullName },
+        redirectTo: `${origin}/auth/callback?next=/welcome`,
+      },
     });
-  if (createErr) return { error: createErr.message, tempPassword: null };
+  if (linkErr) return { error: linkErr.message, inviteLink: null, emailed: false };
 
   const { error: profErr } = await admin
     .from("profiles")
     .update({ role: "customer", customer_id: customerId, full_name: fullName })
-    .eq("id", created.user.id);
-  if (profErr) return { error: profErr.message, tempPassword: null };
+    .eq("id", linkData.user.id);
+  if (profErr) return { error: profErr.message, inviteLink: null, emailed: false };
+
+  const { sendWelcomeEmail, emailConfigured } = await import("@/lib/email");
+  let emailed = false;
+  if (emailConfigured()) {
+    const result = await sendWelcomeEmail({
+      to: email,
+      name: fullName,
+      link: linkData.properties.action_link,
+      isCustomer: true,
+    });
+    emailed = !result.error;
+  }
 
   revalidatePath(`/app/customers/${customerId}`);
-  return { error: null, tempPassword };
+  return { error: null, inviteLink: linkData.properties.action_link, emailed };
 }
 
 export async function deleteLocation(customerId: string, locationId: string) {

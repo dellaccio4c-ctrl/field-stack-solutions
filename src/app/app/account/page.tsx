@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ROLE_LABEL, type UserRole } from "@/lib/roles";
 import { PasswordForm } from "./password-form";
+import { ProfileForm } from "./profile-form";
 
 export default async function AccountPage() {
   const supabase = await createClient();
@@ -10,7 +11,7 @@ export default async function AccountPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name, email, role, employee_code, job_title, phone, territory, hire_date"
+      "full_name, email, role, employee_code, job_title, phone, territory, hire_date, preferred_name, personal_email"
     )
     .eq("id", user!.id)
     .single();
@@ -77,6 +78,14 @@ export default async function AccountPage() {
           )}
         </div>
       </div>
+
+      <ProfileForm
+        defaults={{
+          preferred_name: profile?.preferred_name ?? "",
+          phone: profile?.phone ?? "",
+          personal_email: profile?.personal_email ?? "",
+        }}
+      />
 
       <PasswordForm />
     </div>

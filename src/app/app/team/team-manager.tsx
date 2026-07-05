@@ -17,6 +17,9 @@ type Member = {
   territory: string | null;
   hire_date: string | null;
   notes: string | null;
+  legal_first_name: string | null;
+  legal_last_name: string | null;
+  preferred_name: string | null;
 };
 
 const STAFF_ROLES: UserRole[] = ["readonly", "field", "manager", "admin", "owner"];
@@ -66,8 +69,11 @@ export function TeamManager({
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
-  const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
+  const [inviteResult, setInviteResult] = useState<{
+    email: string;
+    link: string;
+    emailed: boolean;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function handleInvite(formData: FormData) {
@@ -80,8 +86,11 @@ export function TeamManager({
       setError(result.error);
       return;
     }
-    setInvitedEmail(email);
-    setTempPassword(result.tempPassword);
+    setInviteResult({
+      email,
+      link: result.inviteLink!,
+      emailed: result.emailed,
+    });
     setInviteOpen(false);
   }
 
@@ -120,19 +129,38 @@ export function TeamManager({
         )}
       </div>
 
-      {tempPassword && (
+      {inviteResult && (
         <div className="bg-[#e3f6ec] border border-[#1f9d63]/30 rounded-2xl p-5 mb-5">
           <div className="font-bold text-[#1f9d63] mb-1">
-            Account created for {invitedEmail}
+            {inviteResult.emailed
+              ? `Welcome email sent to ${inviteResult.email}`
+              : `Invite created for ${inviteResult.email}`}
           </div>
           <div className="text-sm text-[#0e1726]">
-            Temporary password (shown once — share it with them securely):{" "}
-            <code className="bg-white px-2 py-1 rounded font-bold select-all">
-              {tempPassword}
-            </code>
+            {inviteResult.emailed
+              ? "They'll receive a setup link to choose their password and profile details."
+              : "Email sending isn't configured yet — copy this setup link and share it with them securely:"}
           </div>
+          {!inviteResult.emailed && (
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                readOnly
+                value={inviteResult.link}
+                onFocus={(e) => e.target.select()}
+                className="flex-1 text-xs border border-[#e4e9f1] rounded-lg px-2 py-1.5 bg-white"
+              />
+              <button
+                onClick={() =>
+                  navigator.clipboard.writeText(inviteResult.link)
+                }
+                className="bg-[#0e1f38] text-white text-xs font-semibold rounded-lg px-3 py-1.5"
+              >
+                Copy
+              </button>
+            </div>
+          )}
           <button
-            onClick={() => setTempPassword(null)}
+            onClick={() => setInviteResult(null)}
             className="text-sm text-[#5a6b85] underline mt-2"
           >
             Dismiss
@@ -168,7 +196,16 @@ export function TeamManager({
                   }`}
                 >
                   <td className="px-5 py-3.5">
-                    <span className="font-semibold">{m.full_name || "—"}</span>
+                    <span className="font-semibold">
+                      {m.preferred_name || m.full_name || "—"}
+                    </span>
+                    {m.preferred_name &&
+                      m.full_name &&
+                      m.preferred_name !== m.full_name && (
+                        <span className="ml-1.5 text-xs text-[#5a6b85]">
+                          ({m.full_name})
+                        </span>
+                      )}
                     {isMe && (
                       <span className="ml-2 text-xs text-[#b9700f] font-bold">
                         (you)
@@ -268,11 +305,26 @@ export function TeamManager({
             <form action={handleEmployeeSave} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <EField
-                  name="full_name"
-                  label="Full name"
+                  name="legal_first_name"
+                  label="Legal first name"
                   required
-                  defaultValue={editing.full_name}
+                  defaultValue={
+                    editing.legal_first_name ??
+                    editing.full_name.split(" ")[0] ??
+                    ""
+                  }
                 />
+                <EField
+                  name="legal_last_name"
+                  label="Legal last name"
+                  required
+                  defaultValue={
+                    editing.legal_last_name ??
+                    editing.full_name.split(" ").slice(1).join(" ")
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <EField
                   name="job_title"
                   label="Job title"
@@ -355,25 +407,26 @@ export function TeamManager({
               Add Team Member
             </h2>
             <form action={handleInvite} className="space-y-3">
-              <div>
-                <label className="block text-sm font-semibold text-[#0e1726] mb-1">
-                  Full name
-                </label>
-                <input
-                  name="full_name"
-                  required
-                  className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 focus:outline-none focus:border-[#ff8a1e]"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <EField name="legal_first_name" label="Legal first name" required />
+                <EField name="legal_last_name" label="Legal last name" required />
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-[#0e1726] mb-1">
-                  Email
-                </label>
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 focus:outline-none focus:border-[#ff8a1e]"
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-[#0e1726] mb-1">
+                    Email <span className="text-[#d24b4b]">*</span>
+                  </label>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 focus:outline-none focus:border-[#ff8a1e]"
+                  />
+                </div>
+                <EField
+                  name="employee_code"
+                  label="Employee code"
+                  placeholder="e.g. FSS-002"
                 />
               </div>
               <div>
