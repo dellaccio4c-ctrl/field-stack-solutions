@@ -56,7 +56,6 @@ export async function GET(
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
-    payment_method_types: ["card", "us_bank_account"],
     customer_email: customer?.email ?? undefined,
     line_items: [
       {
