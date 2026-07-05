@@ -172,6 +172,59 @@ export async function recordWorkOrderPhoto(
   return { error: null };
 }
 
+// Create an invoice from a work order (manager+). Pre-fills the customer,
+// site, and a labor line; links it for job costing.
+export async function createInvoiceFromWorkOrder(workOrderId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in", invoiceId: null };
+
+  const { data: wo } = await supabase
+    .from("work_orders")
+    .select("id, title, customer_id, location_id, invoice_id, minutes_on_site")
+    .eq("id", workOrderId)
+    .single();
+  if (!wo) return { error: "Work order not found", invoiceId: null };
+  if (wo.invoice_id)
+    return { error: "This work order already has an invoice.", invoiceId: null };
+  if (!wo.customer_id)
+    return {
+      error: "Set a customer on this work order first.",
+      invoiceId: null,
+    };
+
+  const { data: invoice, error: invErr } = await supabase
+    .from("invoices")
+    .insert({
+      customer_id: wo.customer_id,
+      location_id: wo.location_id,
+      title: wo.title,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+  if (invErr) return { error: invErr.message, invoiceId: null };
+
+  // Starter labor line so the invoice isn't empty; edit freely in draft.
+  await supabase.from("line_items").insert({
+    invoice_id: invoice.id,
+    description: `Service — ${wo.title}`,
+    quantity: wo.minutes_on_site ? Math.max(0.5, wo.minutes_on_site / 60) : 1,
+    unit_price: 0,
+  });
+
+  const { error: linkErr } = await supabase
+    .from("work_orders")
+    .update({ invoice_id: invoice.id })
+    .eq("id", workOrderId);
+  if (linkErr) return { error: linkErr.message, invoiceId: null };
+
+  revalidatePath(`/app/work-orders/${workOrderId}`);
+  return { error: null, invoiceId: invoice.id };
+}
+
 // Manual PM generation (manager+). Same engine as the nightly cron.
 export async function runPmGeneration() {
   const supabase = await createClient();

@@ -147,6 +147,8 @@ export default async function WorkOrderDetailPage({
           scheduledDate={wo.scheduled_date}
           scheduledEnd={wo.scheduled_end}
           staff={staff ?? []}
+          hasInvoice={Boolean(wo.invoice_id)}
+          hasCustomer={Boolean(wo.customer_id)}
         />
       </div>
 

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   setWorkOrderStatus,
   assignWorkOrder,
   scheduleWorkOrder,
+  createInvoiceFromWorkOrder,
 } from "../actions";
 
 type Staff = { id: string; full_name: string; preferred_name: string | null };
@@ -16,6 +18,8 @@ export function WorkOrderActions({
   scheduledDate,
   scheduledEnd,
   staff,
+  hasInvoice = false,
+  hasCustomer = false,
 }: {
   workOrderId: string;
   status: string;
@@ -23,7 +27,10 @@ export function WorkOrderActions({
   scheduledDate: string | null;
   scheduledEnd: string | null;
   staff: Staff[];
+  hasInvoice?: boolean;
+  hasCustomer?: boolean;
 }) {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completeOpen, setCompleteOpen] = useState(false);
@@ -95,6 +102,23 @@ export function WorkOrderActions({
             disabled={busy}
           >
             Cancel WO
+          </Btn>
+        )}
+        {status === "completed" && !hasInvoice && hasCustomer && (
+          <Btn
+            onClick={async () => {
+              setBusy(true);
+              setError(null);
+              const result = await createInvoiceFromWorkOrder(workOrderId);
+              setBusy(false);
+              if (result.error) setError(result.error);
+              else if (result.invoiceId)
+                router.push(`/app/invoices/${result.invoiceId}`);
+            }}
+            disabled={busy}
+            primary
+          >
+            💳 Create invoice
           </Btn>
         )}
         {!active && (
