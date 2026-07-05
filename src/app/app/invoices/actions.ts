@@ -39,6 +39,36 @@ export async function setInvoiceStatus(invoiceId: string, status: string) {
   return { error: null };
 }
 
+export async function emailInvoice(invoiceId: string) {
+  const { buildInvoicePdf } = await import("@/lib/pdf/build");
+  const { sendDocumentEmail } = await import("@/lib/email");
+  const { money } = await import("@/lib/money");
+
+  const doc = await buildInvoicePdf(invoiceId);
+  if (!doc) return { error: "Invoice not found" };
+  if (!doc.customerEmail)
+    return { error: "This customer has no email address on file." };
+
+  const result = await sendDocumentEmail({
+    to: doc.customerEmail,
+    kind: "Invoice",
+    number: doc.number,
+    customerName: doc.customerName,
+    total: money(doc.total),
+    pdf: doc.pdf,
+  });
+  if (result.error) return { error: result.error };
+
+  const supabase = await createClient();
+  const { data: inv } = await supabase
+    .from("invoices")
+    .select("status")
+    .eq("id", invoiceId)
+    .single();
+  if (inv?.status === "draft") await setInvoiceStatus(invoiceId, "sent");
+  return { error: null };
+}
+
 export async function recordPayment(invoiceId: string, formData: FormData) {
   const supabase = await createClient();
   const {

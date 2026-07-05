@@ -24,6 +24,12 @@ export default async function InvoiceDetailPage({
 
   if (!inv) notFound();
 
+  const { data: catalog } = await supabase
+    .from("catalog_items")
+    .select("id, name, description, unit_price")
+    .eq("is_active", true)
+    .order("name");
+
   const items = (inv.line_items ?? []).sort(
     (a: { sort_order: number }, b: { sort_order: number }) =>
       a.sort_order - b.sort_order
@@ -69,7 +75,12 @@ export default async function InvoiceDetailPage({
         />
       </div>
 
-      <InvoiceItemsEditor invoiceId={inv.id} items={items} editable={editable} />
+      <InvoiceItemsEditor
+        invoiceId={inv.id}
+        items={items}
+        editable={editable}
+        catalog={catalog ?? []}
+      />
 
       <div className="mt-6 flex justify-end">
         <div className="bg-white rounded-2xl border border-[#e4e9f1] p-5 w-72 space-y-2 text-sm shadow-sm">

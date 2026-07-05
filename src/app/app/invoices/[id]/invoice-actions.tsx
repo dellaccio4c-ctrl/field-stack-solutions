@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { setInvoiceStatus, recordPayment } from "../actions";
+import { setInvoiceStatus, recordPayment, emailInvoice } from "../actions";
 
 export function InvoiceActions({
   invoiceId,
@@ -33,6 +33,18 @@ export function InvoiceActions({
   return (
     <div className="flex flex-col items-end gap-2">
       <div className="flex gap-2 flex-wrap justify-end">
+        <a
+          href={`/app/invoices/${invoiceId}/pdf`}
+          target="_blank"
+          className="bg-white border border-[#e4e9f1] hover:border-[#ff8a1e] text-[#0e1726] font-semibold rounded-lg px-4 py-2 text-sm transition"
+        >
+          Download PDF
+        </a>
+        {status !== "void" && status !== "paid" && (
+          <Btn onClick={() => run(() => emailInvoice(invoiceId))} disabled={busy}>
+            Email to customer
+          </Btn>
+        )}
         {status === "draft" && (
           <Btn
             onClick={() => run(() => setInvoiceStatus(invoiceId, "sent"))}

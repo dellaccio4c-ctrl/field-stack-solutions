@@ -66,6 +66,30 @@ export async function setEstimateStatus(estimateId: string, status: string) {
   return { error: null };
 }
 
+export async function emailEstimate(estimateId: string) {
+  const { buildEstimatePdf } = await import("@/lib/pdf/build");
+  const { sendDocumentEmail } = await import("@/lib/email");
+  const { money } = await import("@/lib/money");
+
+  const doc = await buildEstimatePdf(estimateId);
+  if (!doc) return { error: "Estimate not found" };
+  if (!doc.customerEmail)
+    return { error: "This customer has no email address on file." };
+
+  const result = await sendDocumentEmail({
+    to: doc.customerEmail,
+    kind: "Estimate",
+    number: doc.number,
+    customerName: doc.customerName,
+    total: money(doc.total),
+    pdf: doc.pdf,
+  });
+  if (result.error) return { error: result.error };
+
+  await setEstimateStatus(estimateId, "sent");
+  return { error: null };
+}
+
 export async function convertToInvoice(estimateId: string) {
   const supabase = await createClient();
   const {

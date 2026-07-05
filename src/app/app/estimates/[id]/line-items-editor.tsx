@@ -11,14 +11,23 @@ type Item = {
   unit_price: number;
 };
 
+type CatalogItem = {
+  id: string;
+  name: string;
+  description: string | null;
+  unit_price: number;
+};
+
 export function LineItemsEditor({
   estimateId,
   items,
   editable,
+  catalog = [],
 }: {
   estimateId: string;
   items: Item[];
   editable: boolean;
+  catalog?: CatalogItem[];
 }) {
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -83,6 +92,34 @@ export function LineItemsEditor({
           action={handleAdd}
           className="flex gap-3 items-end p-4 border-t border-[#e4e9f1] bg-[#f5f7fb] flex-wrap"
         >
+          {catalog.length > 0 && (
+            <div className="w-full">
+              <label className="block text-xs font-semibold text-[#5a6b85] mb-1">
+                Add from catalog
+              </label>
+              <select
+                defaultValue=""
+                onChange={(e) => {
+                  const it = catalog.find((c) => c.id === e.target.value);
+                  if (!it) return;
+                  const f = e.currentTarget.form!;
+                  (f.elements.namedItem("description") as HTMLInputElement).value =
+                    it.description ? `${it.name} — ${it.description}` : it.name;
+                  (f.elements.namedItem("unit_price") as HTMLInputElement).value =
+                    String(Number(it.unit_price));
+                  e.currentTarget.value = "";
+                }}
+                className="w-full max-w-md border border-[#e4e9f1] rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#ff8a1e]"
+              >
+                <option value="">Pick a saved service…</option>
+                {catalog.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} — {money(c.unit_price)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex-1 min-w-48">
             <label className="block text-xs font-semibold text-[#5a6b85] mb-1">
               Description
