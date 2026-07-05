@@ -66,6 +66,22 @@ export async function setEstimateStatus(estimateId: string, status: string) {
   return { error: null };
 }
 
+// Customer-portal action: RLS only permits this on the customer's own
+// estimates while they are in 'sent' status.
+export async function customerDecideEstimate(
+  estimateId: string,
+  decision: "approved" | "declined"
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("estimates")
+    .update({ status: decision, decided_at: new Date().toISOString() })
+    .eq("id", estimateId);
+  if (error) return { error: error.message };
+  revalidatePath("/app");
+  return { error: null };
+}
+
 export async function emailEstimate(estimateId: string) {
   const { buildEstimatePdf } = await import("@/lib/pdf/build");
   const { sendDocumentEmail } = await import("@/lib/email");

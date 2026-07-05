@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ROLE_LABEL, type UserRole } from "@/lib/roles";
+import { CustomerDashboard } from "./customer-dashboard";
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -8,11 +9,24 @@ export default async function Dashboard() {
   } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role")
+    .select("full_name, role, customer_id, customers(name)")
     .eq("id", user!.id)
     .single();
 
   const role = (profile?.role ?? "readonly") as UserRole;
+
+  if (role === "customer" && profile?.customer_id) {
+    return (
+      <CustomerDashboard
+        customerId={profile.customer_id}
+        customerName={
+          (profile.customers as unknown as { name: string } | null)?.name ??
+          profile.full_name ??
+          ""
+        }
+      />
+    );
+  }
 
   return (
     <div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AddLocationForm } from "./add-location-form";
+import { PortalLoginForm } from "./portal-login-form";
 
 export default async function CustomerDetailPage({
   params,
@@ -53,7 +54,10 @@ export default async function CustomerDetailPage({
         <h2 className="text-xl font-extrabold text-[#0e1726]">
           Sites ({customer.locations?.length ?? 0})
         </h2>
-        <AddLocationForm customerId={customer.id} />
+        <div className="flex gap-2">
+          <PortalLoginForm customerId={customer.id} />
+          <AddLocationForm customerId={customer.id} />
+        </div>
       </div>
 
       {!customer.locations?.length ? (

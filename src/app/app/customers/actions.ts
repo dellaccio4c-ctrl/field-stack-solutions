@@ -53,6 +53,65 @@ export async function createLocation(customerId: string, formData: FormData) {
   return { error: null };
 }
 
+export async function createCustomerLogin(
+  customerId: string,
+  formData: FormData
+) {
+  const { adminConfigured, createAdminClient } = await import(
+    "@/lib/supabase/admin"
+  );
+  if (!adminConfigured()) {
+    return {
+      error:
+        "Customer logins aren't configured yet. Add SUPABASE_SERVICE_ROLE_KEY to the environment.",
+      tempPassword: null,
+    };
+  }
+
+  // Only admins and owners may create customer portal accounts.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user!.id)
+    .single();
+  if (!me || !["admin", "owner"].includes(me.role))
+    return {
+      error: "Only Admins and Owners can create customer logins.",
+      tempPassword: null,
+    };
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const fullName = String(formData.get("full_name") ?? "").trim();
+  if (!email) return { error: "Email is required.", tempPassword: null };
+
+  const tempPassword = Array.from(crypto.getRandomValues(new Uint8Array(9)))
+    .map((b) => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"[b % 55])
+    .join("");
+
+  const admin = createAdminClient();
+  const { data: created, error: createErr } =
+    await admin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { full_name: fullName },
+    });
+  if (createErr) return { error: createErr.message, tempPassword: null };
+
+  const { error: profErr } = await admin
+    .from("profiles")
+    .update({ role: "customer", customer_id: customerId, full_name: fullName })
+    .eq("id", created.user.id);
+  if (profErr) return { error: profErr.message, tempPassword: null };
+
+  revalidatePath(`/app/customers/${customerId}`);
+  return { error: null, tempPassword };
+}
+
 export async function deleteLocation(customerId: string, locationId: string) {
   const supabase = await createClient();
   const { error } = await supabase
