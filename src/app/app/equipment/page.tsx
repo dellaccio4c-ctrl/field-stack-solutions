@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { EquipmentManager } from "./equipment-manager";
+import { ImportEquipmentModal } from "./import-equipment-modal";
 
 export default async function EquipmentPage({
   searchParams,
@@ -37,6 +38,7 @@ export default async function EquipmentPage({
         <h1 className="text-3xl font-extrabold tracking-tight text-[#0e1726]">
           Equipment
         </h1>
+        <ImportEquipmentModal />
       </div>
       <p className="text-[#5a6b85] mb-6">
         Every tracked unit with its lifetime service history. Search by name,
