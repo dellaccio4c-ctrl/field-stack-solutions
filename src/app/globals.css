@@ -25,3 +25,11 @@ select,
 textarea {
   color: #0e1726;
 }
+
+/* Leaflet's internal panes/controls use z-index up to 1000, which would
+   float above our z-50 modal overlays. Isolate the map so its stacking
+   order stays inside its own box and modals always win. */
+.leaflet-container {
+  z-index: 0;
+  isolation: isolate;
+}
