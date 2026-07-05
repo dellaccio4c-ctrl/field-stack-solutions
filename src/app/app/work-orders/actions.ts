@@ -172,6 +172,30 @@ export async function recordWorkOrderPhoto(
   return { error: null };
 }
 
+// Manual PM generation (manager+). Same engine as the nightly cron.
+export async function runPmGeneration() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in", result: null };
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  const allowed =
+    me && ["manager", "admin", "owner", "xpress_pumping"].includes(me.role);
+  if (!allowed)
+    return { error: "Manager access or above required.", result: null };
+
+  const { generatePmWorkOrders } = await import("@/lib/pm-generator");
+  const result = await generatePmWorkOrders();
+  revalidatePath("/app/work-orders");
+  return { error: null, result };
+}
+
 export async function setTripPick(id: string, pick: "yes" | "no" | "maybe") {
   const supabase = await createClient();
   const {

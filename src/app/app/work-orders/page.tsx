@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge, PriorityBadge, WoTypeBadge } from "../status-badge";
 import { NewWorkOrderModal } from "./new-work-order-modal";
+import { GeneratePmButton } from "./generate-pm-button";
 
 const OPEN_STATUSES = ["open", "scheduled", "in_progress", "on_hold"];
 
@@ -61,7 +62,8 @@ export default async function WorkOrdersPage({
         <h1 className="text-3xl font-extrabold tracking-tight text-[#0e1726]">
           Work Orders
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <GeneratePmButton />
           <Link
             href="/app/work-orders/trip"
             className="bg-white border border-[#e4e9f1] hover:border-[#ff8a1e] text-[#0e1726] font-semibold rounded-lg px-4 py-2 text-sm transition"

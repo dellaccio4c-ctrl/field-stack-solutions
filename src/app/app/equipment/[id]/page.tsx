@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "../../status-badge";
+import { EquipmentQr } from "./equipment-qr";
 
 function fmtTs(ts: string) {
   return new Date(ts).toLocaleString(undefined, {
@@ -77,6 +78,7 @@ export default async function EquipmentDetailPage({
               : ""}
           </div>
         </div>
+        <EquipmentQr equipmentId={eq.id} />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 text-sm">
@@ -94,6 +96,14 @@ export default async function EquipmentDetailPage({
           }
         />
         <Spec label="Warranty expires" value={eq.warranty_expires} />
+        <Spec
+          label="PM schedule"
+          value={
+            eq.pm_interval_months
+              ? `Every ${eq.pm_interval_months} months (±${eq.pm_window_days}d) — auto work orders`
+              : "No auto-PM set"
+          }
+        />
         <Spec
           label="Lifetime service"
           value={`${history?.length ?? 0} work orders · ${completed.length} completed${

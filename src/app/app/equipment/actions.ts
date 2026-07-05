@@ -13,6 +13,13 @@ function fields(formData: FormData) {
     unit_number: String(formData.get("unit_number") ?? "").trim() || null,
     install_date: String(formData.get("install_date") || "") || null,
     warranty_expires: String(formData.get("warranty_expires") || "") || null,
+    pm_interval_months: formData.get("pm_interval_months")
+      ? parseInt(String(formData.get("pm_interval_months")), 10) || null
+      : null,
+    pm_window_days: Math.max(
+      0,
+      parseInt(String(formData.get("pm_window_days") || "14"), 10) || 14
+    ),
     customer_id: String(formData.get("customer_id") ?? "") || null,
     location_id: String(formData.get("location_id") ?? "") || null,
     notes: String(formData.get("notes") ?? "").trim() || null,

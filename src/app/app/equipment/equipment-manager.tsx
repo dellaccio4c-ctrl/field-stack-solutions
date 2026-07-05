@@ -14,6 +14,8 @@ export type EquipmentRow = {
   unit_number: string | null;
   install_date: string | null;
   warranty_expires: string | null;
+  pm_interval_months: number | null;
+  pm_window_days: number;
   status: string;
   notes: string | null;
   customer_id: string | null;
@@ -243,6 +245,35 @@ export function EquipmentManager({
                   label="Unit #"
                   defaultValue={current?.unit_number ?? ""}
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-[#0e1726] mb-1">
+                    PM interval (months)
+                  </label>
+                  <input
+                    name="pm_interval_months"
+                    type="number"
+                    min="1"
+                    max="60"
+                    defaultValue={current?.pm_interval_months ?? ""}
+                    placeholder="blank = no auto-PM"
+                    className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 focus:outline-none focus:border-[#ff8a1e]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-[#0e1726] mb-1">
+                    PM window (± days)
+                  </label>
+                  <input
+                    name="pm_window_days"
+                    type="number"
+                    min="0"
+                    max="90"
+                    defaultValue={current?.pm_window_days ?? 14}
+                    className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 focus:outline-none focus:border-[#ff8a1e]"
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
