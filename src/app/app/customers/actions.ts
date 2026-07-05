@@ -37,20 +37,78 @@ export async function updateCustomer(id: string, formData: FormData) {
   return { error: null };
 }
 
+async function geocodeAddress(parts: (string | null)[]) {
+  const q = parts.filter(Boolean).join(", ");
+  if (!q) return null;
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=${encodeURIComponent(q)}`,
+      { headers: { "User-Agent": "FieldStackSolutions/1.0 (info@fieldstacksolutions.com)" } }
+    );
+    if (!res.ok) return null;
+    const results = (await res.json()) as { lat: string; lon: string }[];
+    return results.length
+      ? { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function createLocation(customerId: string, formData: FormData) {
   const supabase = await createClient();
+  const address = String(formData.get("address") ?? "").trim();
+  const city = String(formData.get("city") ?? "").trim() || null;
+  const state = String(formData.get("state") ?? "").trim() || null;
+  const zip = String(formData.get("zip") ?? "").trim() || null;
+  const coords = await geocodeAddress([address, city, state, zip]);
+
   const { error } = await supabase.from("locations").insert({
     customer_id: customerId,
     label: String(formData.get("label") ?? "").trim(),
-    address: String(formData.get("address") ?? "").trim(),
-    city: String(formData.get("city") ?? "").trim() || null,
-    state: String(formData.get("state") ?? "").trim() || null,
-    zip: String(formData.get("zip") ?? "").trim() || null,
+    address,
+    city,
+    state,
+    zip,
     notes: String(formData.get("notes") ?? "").trim() || null,
+    lat: coords?.lat ?? null,
+    lng: coords?.lng ?? null,
   });
   if (error) return { error: error.message };
   revalidatePath(`/app/customers/${customerId}`);
+  revalidatePath("/app/sites");
   return { error: null };
+}
+
+// Geocode up to 12 sites missing pins (free geocoder allows ~1 req/sec).
+export async function locateMissingSitePins() {
+  const supabase = await createClient();
+  const { data: missing } = await supabase
+    .from("locations")
+    .select("id, address, city, state, zip")
+    .is("lat", null)
+    .limit(12);
+  if (!missing?.length) return { error: null, located: 0, remaining: 0 };
+
+  let located = 0;
+  for (const loc of missing) {
+    const coords = await geocodeAddress([loc.address, loc.city, loc.state, loc.zip]);
+    if (coords) {
+      await supabase
+        .from("locations")
+        .update({ lat: coords.lat, lng: coords.lng })
+        .eq("id", loc.id);
+      located++;
+    }
+    await new Promise((r) => setTimeout(r, 1100));
+  }
+
+  const { count } = await supabase
+    .from("locations")
+    .select("id", { count: "exact", head: true })
+    .is("lat", null);
+  revalidatePath("/app/sites");
+  return { error: null, located, remaining: count ?? 0 };
 }
 
 export async function createCustomerLogin(
