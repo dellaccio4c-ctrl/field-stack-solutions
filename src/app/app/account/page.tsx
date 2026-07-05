@@ -1,0 +1,50 @@
+import { createClient } from "@/lib/supabase/server";
+import { ROLE_LABEL, type UserRole } from "@/lib/roles";
+import { PasswordForm } from "./password-form";
+
+export default async function AccountPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, email, role")
+    .eq("id", user!.id)
+    .single();
+
+  return (
+    <div className="max-w-xl">
+      <h1 className="text-3xl font-extrabold tracking-tight text-[#0e1726] mb-6">
+        My Account
+      </h1>
+
+      <div className="bg-white rounded-2xl border border-[#e4e9f1] p-6 shadow-sm mb-6">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <div className="text-xs font-bold tracking-wider text-[#5a6b85] uppercase mb-1">
+              Name
+            </div>
+            <div className="font-semibold">{profile?.full_name || "—"}</div>
+          </div>
+          <div>
+            <div className="text-xs font-bold tracking-wider text-[#5a6b85] uppercase mb-1">
+              Email
+            </div>
+            <div className="font-semibold">{profile?.email || user!.email}</div>
+          </div>
+          <div>
+            <div className="text-xs font-bold tracking-wider text-[#5a6b85] uppercase mb-1">
+              Access level
+            </div>
+            <div className="font-semibold">
+              {ROLE_LABEL[(profile?.role ?? "readonly") as UserRole]}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <PasswordForm />
+    </div>
+  );
+}

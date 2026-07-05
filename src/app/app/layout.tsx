@@ -34,6 +34,7 @@ export default async function AppLayout({
     { href: "/app/financials", label: "Financials", min: "owner" as UserRole },
     { href: "/app/team", label: "Team", min: "admin" as UserRole },
     { href: "/app/dev", label: "Under Development", min: "owner" as UserRole },
+    { href: "/app/account", label: "Account", min: "customer" as UserRole },
   ];
 
   return (

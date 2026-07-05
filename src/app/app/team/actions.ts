@@ -32,7 +32,8 @@ export async function inviteUser(formData: FormData) {
   const role = String(formData.get("role") || "readonly") as UserRole;
   if (rank < 4)
     return { error: "Only Admins and Owners can add team members.", tempPassword: null };
-  if (ROLE_RANK[role] >= rank)
+  // Owners may assign any level (including co-Owner); Admins only below themselves.
+  if (rank < 5 && ROLE_RANK[role] >= rank)
     return {
       error: "You can only assign roles below your own access level.",
       tempPassword: null,

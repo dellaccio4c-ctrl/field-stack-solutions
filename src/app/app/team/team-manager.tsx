@@ -103,8 +103,9 @@ export function TeamManager({
             {members.map((m) => {
               const theirRank = ROLE_RANK[m.role as UserRole] ?? 0;
               const isMe = m.id === myId;
-              // You can manage someone only if your rank is strictly higher.
-              const canManage = !isMe && myRank > theirRank;
+              // Owners can manage anyone but themselves (incl. other owners);
+              // everyone else needs a strictly higher rank.
+              const canManage = !isMe && (myRank === 5 || myRank > theirRank);
               return (
                 <tr
                   key={m.id}
@@ -131,7 +132,7 @@ export function TeamManager({
                         className="border border-[#e4e9f1] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-[#ff8a1e]"
                       >
                         {STAFF_ROLES.filter(
-                          (r) => ROLE_RANK[r] < myRank
+                          (r) => myRank === 5 || ROLE_RANK[r] < myRank
                         ).map((r) => (
                           <option key={r} value={r}>
                             {ROLE_LABEL[r]}
@@ -208,7 +209,9 @@ export function TeamManager({
                   name="role"
                   className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#ff8a1e]"
                 >
-                  {STAFF_ROLES.filter((r) => ROLE_RANK[r] < myRank).map((r) => (
+                  {STAFF_ROLES.filter(
+                    (r) => myRank === 5 || ROLE_RANK[r] < myRank
+                  ).map((r) => (
                     <option key={r} value={r}>
                       {ROLE_LABEL[r]}
                     </option>
