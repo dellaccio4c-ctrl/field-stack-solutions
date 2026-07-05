@@ -441,14 +441,14 @@
       <div class="contact-grid">
         <form onsubmit="submitQuote(event)">
           <div class="row-2">
-            <div class="field"><label>Full name</label><input required placeholder="Jordan Rivera"></div>
-            <div class="field"><label>Phone</label><input required placeholder="(555) 123-4567"></div>
+            <div class="field"><label>Full name</label><input name="full_name" required placeholder="Jordan Rivera"></div>
+            <div class="field"><label>Phone</label><input name="phone" required placeholder="(555) 123-4567"></div>
           </div>
-          <div class="field"><label>Email</label><input type="email" required placeholder="you@company.com"></div>
+          <div class="field"><label>Email</label><input name="email" type="email" required placeholder="you@company.com"></div>
           <div class="field"><label>Service needed</label>
-            <select><option>Information Technology</option><option>Electrical</option><option>Mechanical / HVAC</option><option>Low-Voltage &amp; Security</option><option>Building Controls</option><option>Managed Services</option><option>Emergency Support</option></select>
+            <select name="service"><option>Information Technology</option><option>Electrical</option><option>Mechanical / HVAC</option><option>Low-Voltage &amp; Security</option><option>Building Controls</option><option>Managed Services</option><option>Emergency Support</option></select>
           </div>
-          <div class="field"><label>Tell us about the project</label><textarea rows="4" placeholder="Network refresh across two floors, 40 drops plus new switch stack..."></textarea></div>
+          <div class="field"><label>Tell us about the project</label><textarea name="message" rows="4" placeholder="Network refresh across two floors, 40 drops plus new switch stack..."></textarea></div>
           <button class="btn btn-primary btn-block" type="submit">Send Request</button>
         </form>
         <div class="contact-info">
@@ -1006,15 +1006,35 @@ function goSection(id){
   if(id==='home'){window.scrollTo({top:0,behavior:'smooth'});}
   else{const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth'});}
 }
-function submitQuote(e){e.preventDefault();e.target.reset();toast("Request sent — we'll call within an hour");}
-
-function openPortal(){
-  document.getElementById('site').style.display='none';
-  document.getElementById('portal').classList.add('active');
-  document.getElementById('login').classList.remove('hidden');
-  document.getElementById('app').classList.add('hidden');
-  window.scrollTo(0,0);
+async function submitQuote(e){
+  e.preventDefault();
+  const f=e.target;
+  const btn=f.querySelector('button[type=submit]');
+  btn.disabled=true;btn.textContent='Sending…';
+  try{
+    const res=await fetch('/api/leads',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        full_name:f.querySelector('[name=full_name]').value,
+        phone:f.querySelector('[name=phone]').value,
+        email:f.querySelector('[name=email]').value,
+        service:f.querySelector('[name=service]').value,
+        message:f.querySelector('[name=message]').value
+      })
+    });
+    if(!res.ok) throw new Error();
+    f.reset();
+    toast("Request sent — we'll call within one business hour");
+  }catch(err){
+    toast("Something went wrong — please call or email us instead");
+  }finally{
+    btn.disabled=false;btn.textContent='Send Request';
+  }
 }
+
+/* Portal buttons go to the real app login */
+function openPortal(){window.location.href='/login';}
 function closePortal(){
   document.getElementById('portal').classList.remove('active');
   document.getElementById('site').style.display='block';
@@ -1233,7 +1253,8 @@ document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>
 
 <script>
 /* ===================== STAFF / SERVICE MANAGER CONSOLE ===================== */
-function openStaff(){
+function openStaff(){window.location.href='/login';}
+function openStaffLegacyDemo(){
   document.getElementById('site').style.display='none';
   document.getElementById('portal').classList.remove('active');
   document.getElementById('staff').classList.add('active');

@@ -26,6 +26,7 @@ export default async function AppLayout({
 
   const nav = [
     { href: "/app", label: "Dashboard", min: "customer" as UserRole },
+    { href: "/app/leads", label: "Leads", min: "field" as UserRole },
     { href: "/app/customers", label: "Customers", min: "readonly" as UserRole },
     { href: "/app/estimates", label: "Estimates", min: "readonly" as UserRole },
     { href: "/app/invoices", label: "Invoices", min: "readonly" as UserRole },
