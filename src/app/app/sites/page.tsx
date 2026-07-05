@@ -7,6 +7,7 @@ import {
 } from "@/lib/geocode";
 import { SitesMapLoader } from "./sites-map-loader";
 import { LocateSitePinsButton } from "./locate-site-pins-button";
+import { ImportSitesModal } from "./import-sites-modal";
 
 const OPEN_WO = ["open", "scheduled", "in_progress", "on_hold"];
 const NEARBY_MILES = 30;
@@ -104,7 +105,10 @@ export default async function SitesPage({
         <h1 className="text-3xl font-extrabold tracking-tight text-[#0e1726]">
           Sites
         </h1>
-        <LocateSitePinsButton missingCount={missingPins} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <ImportSitesModal />
+          <LocateSitePinsButton missingCount={missingPins} />
+        </div>
       </div>
       <p className="text-[#5a6b85] mb-5">
         Every service location across all customers. Pins:{" "}
