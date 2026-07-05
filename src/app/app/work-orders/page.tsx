@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { StatusBadge, PriorityBadge } from "../status-badge";
+import { StatusBadge, PriorityBadge, WoTypeBadge } from "../status-badge";
 import { NewWorkOrderModal } from "./new-work-order-modal";
 
 const OPEN_STATUSES = ["open", "scheduled", "in_progress", "on_hold"];
@@ -16,7 +16,7 @@ export default async function WorkOrdersPage({
   let query = supabase
     .from("work_orders")
     .select(
-      "id, number, title, status, priority, state, city, scheduled_date, is_pumping, customers(name), assignee:profiles!work_orders_assigned_to_fkey(full_name, preferred_name)"
+      "id, number, title, status, priority, wo_type, state, city, scheduled_date, customers(name), assignee:profiles!work_orders_assigned_to_fkey(full_name, preferred_name)"
     )
     .order("created_at", { ascending: false });
 
@@ -133,11 +133,7 @@ export default async function WorkOrdersPage({
                       </Link>
                       <span className="ml-2 space-x-1">
                         <PriorityBadge priority={wo.priority} />
-                        {wo.is_pumping && (
-                          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#e8f0fd] text-[#2f6fd6]">
-                            Pumping
-                          </span>
-                        )}
+                        <WoTypeBadge type={wo.wo_type} />
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-[#5a6b85]">

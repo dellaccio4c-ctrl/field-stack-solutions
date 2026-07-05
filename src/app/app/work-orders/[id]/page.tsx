@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { StatusBadge, PriorityBadge } from "../../status-badge";
+import { StatusBadge, PriorityBadge, WoTypeBadge } from "../../status-badge";
 import { WorkOrderActions } from "./work-order-actions";
 import { PhotoSection } from "./photo-section";
 import { NoteForm } from "./note-form";
@@ -106,11 +106,7 @@ export default async function WorkOrderDetailPage({
             </h1>
             <StatusBadge status={wo.status} />
             <PriorityBadge priority={wo.priority} />
-            {wo.is_pumping && (
-              <span className="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-[#e8f0fd] text-[#2f6fd6]">
-                Pumping
-              </span>
-            )}
+            <WoTypeBadge type={wo.wo_type} />
           </div>
           <div className="text-[#0e1726] font-semibold mt-1 text-lg">
             {wo.title}

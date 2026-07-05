@@ -24,6 +24,23 @@ const PRIORITY_STYLES: Record<string, string> = {
   emergency: "bg-[#fbe7e7] text-[#d24b4b]",
 };
 
+const WO_TYPE_LABEL: Record<string, string> = {
+  service: "Service",
+  preventative: "Preventative",
+  pumping: "Pumping",
+  install: "Install",
+  inspection: "Inspection",
+};
+
+export function WoTypeBadge({ type }: { type: string }) {
+  if (!type || type === "service") return null;
+  return (
+    <span className="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-[#e8f0fd] text-[#2f6fd6]">
+      {WO_TYPE_LABEL[type] ?? type}
+    </span>
+  );
+}
+
 export function PriorityBadge({ priority }: { priority: string }) {
   if (priority === "normal") return null;
   return (

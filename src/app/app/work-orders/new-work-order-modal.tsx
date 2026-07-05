@@ -173,7 +173,23 @@ export function NewWorkOrderModal({
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-[#0e1726] mb-1">
+                    Work order type
+                  </label>
+                  <select
+                    name="wo_type"
+                    defaultValue="service"
+                    className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#ff8a1e]"
+                  >
+                    <option value="service">Service Call</option>
+                    <option value="preventative">Preventative Maintenance</option>
+                    <option value="pumping">Pumping</option>
+                    <option value="install">Install / Project</option>
+                    <option value="inspection">Inspection</option>
+                  </select>
+                </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1726] mb-1">
                     Priority
@@ -236,11 +252,6 @@ export function NewWorkOrderModal({
                   </select>
                 </div>
               )}
-
-              <label className="flex items-center gap-2 text-sm font-semibold text-[#0e1726] cursor-pointer">
-                <input type="checkbox" name="is_pumping" className="w-4 h-4" />
-                Pumping division work order
-              </label>
 
               {error && (
                 <div className="text-sm text-[#d24b4b] bg-[#fbe7e7] rounded-lg px-3 py-2">

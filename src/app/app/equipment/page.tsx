@@ -5,9 +5,9 @@ import { EquipmentManager } from "./equipment-manager";
 export default async function EquipmentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ customer?: string; q?: string }>;
+  searchParams: Promise<{ customer?: string; location?: string; q?: string }>;
 }) {
-  const { customer, q } = await searchParams;
+  const { customer, location, q } = await searchParams;
   const supabase = await createClient();
 
   let query = supabase
@@ -17,6 +17,7 @@ export default async function EquipmentPage({
     )
     .order("name");
   if (customer) query = query.eq("customer_id", customer);
+  if (location) query = query.eq("location_id", location);
   if (q)
     query = query.or(
       `name.ilike.%${q}%,serial_number.ilike.%${q}%,unit_number.ilike.%${q}%,brand.ilike.%${q}%,model.ilike.%${q}%`
@@ -61,13 +62,29 @@ export default async function EquipmentPage({
             </option>
           ))}
         </select>
+        {customer && (
+          <select
+            name="location"
+            defaultValue={location ?? ""}
+            className="border border-[#e4e9f1] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#ff8a1e]"
+          >
+            <option value="">All sites</option>
+            {(customers ?? [])
+              .find((c) => c.id === customer)
+              ?.locations?.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                </option>
+              ))}
+          </select>
+        )}
         <button
           type="submit"
           className="bg-[#0e1f38] hover:bg-[#15294a] text-white font-semibold rounded-lg px-4 py-2 text-sm transition"
         >
           Filter
         </button>
-        {(q || customer) && (
+        {(q || customer || location) && (
           <Link
             href="/app/equipment"
             className="text-sm text-[#5a6b85] self-center hover:text-[#b9700f]"
