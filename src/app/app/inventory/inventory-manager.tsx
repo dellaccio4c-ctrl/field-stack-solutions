@@ -36,12 +36,16 @@ const CATEGORY_LABEL: Record<string, string> = {
   other: "Other",
 };
 
+type OpenWO = { id: string; number: number; title: string };
+
 export function InventoryManager({
   items,
   staff,
+  openWorkOrders = [],
 }: {
   items: Item[];
   staff: Staff[];
+  openWorkOrders?: OpenWO[];
 }) {
   const [editing, setEditing] = useState<Item | "new" | null>(null);
   const [adjusting, setAdjusting] = useState<Item | null>(null);
@@ -74,7 +78,8 @@ export function InventoryManager({
     const result = await adjustStock(
       adjusting.id,
       direction === "out" ? -qty : qty,
-      String(formData.get("reason") ?? "")
+      String(formData.get("reason") ?? ""),
+      String(formData.get("work_order_id") ?? "") || null
     );
     setSaving(false);
     if (result.error) {
@@ -250,10 +255,31 @@ export function InventoryManager({
                 </label>
                 <input
                   name="reason"
-                  placeholder="e.g. Used on WO-0012, restock order…"
+                  placeholder="e.g. restock order, used on job…"
                   className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 focus:outline-none focus:border-[#ff8a1e]"
                 />
               </div>
+              {openWorkOrders.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-[#0e1726] mb-1">
+                    Used on work order{" "}
+                    <span className="font-normal text-[#5a6b85]">
+                      (optional — feeds job costing)
+                    </span>
+                  </label>
+                  <select
+                    name="work_order_id"
+                    className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#ff8a1e]"
+                  >
+                    <option value="">—</option>
+                    {openWorkOrders.map((wo) => (
+                      <option key={wo.id} value={wo.id}>
+                        WO-{String(wo.number).padStart(4, "0")} — {wo.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {error && (
                 <div className="text-sm text-[#d24b4b] bg-[#fbe7e7] rounded-lg px-3 py-2">
                   {error}

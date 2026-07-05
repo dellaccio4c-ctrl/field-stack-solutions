@@ -131,6 +131,9 @@ export async function updateEmployee(userId: string, formData: FormData) {
       territory: String(formData.get("territory") ?? "").trim() || null,
       hire_date: String(formData.get("hire_date") || "") || null,
       notes: String(formData.get("notes") ?? "").trim() || null,
+      hourly_cost: formData.get("hourly_cost")
+        ? parseFloat(String(formData.get("hourly_cost"))) || null
+        : null,
     })
     .eq("id", userId);
   if (error) {

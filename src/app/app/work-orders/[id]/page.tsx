@@ -51,25 +51,32 @@ export default async function WorkOrderDetailPage({
     .single();
   const isOwner = me?.role === "owner";
 
-  const [{ data: wo }, { data: staff }] = await Promise.all([
-    supabase
-      .from("work_orders")
-      .select(
-        `*, customers(name), locations(label), equipment(id, name, unit_number, serial_number),
-         assignee:profiles!work_orders_assigned_to_fkey(full_name, preferred_name),
-         creator:profiles!work_orders_created_by_fkey(full_name, preferred_name),
-         work_order_events(id, kind, detail, created_at, actor:profiles(full_name, preferred_name)),
-         work_order_photos(id, url, caption, created_at, photographer:profiles(full_name, preferred_name))`
-      )
-      .eq("id", id)
-      .single(),
-    supabase
-      .from("profiles")
-      .select("id, full_name, preferred_name")
-      .in("role", ["field", "manager", "admin", "owner", "xpress_pumping"])
-      .eq("is_active", true)
-      .order("full_name"),
-  ]);
+  const [{ data: wo }, { data: staff }, { data: partsUsed }] =
+    await Promise.all([
+      supabase
+        .from("work_orders")
+        .select(
+          `*, customers(name), locations(label), equipment(id, name, unit_number, serial_number),
+           assignee:profiles!work_orders_assigned_to_fkey(full_name, preferred_name, hourly_cost),
+           creator:profiles!work_orders_created_by_fkey(full_name, preferred_name),
+           invoice:invoices(id, number, tax_rate, line_items(quantity, unit_price)),
+           work_order_events(id, kind, detail, created_at, actor:profiles(full_name, preferred_name)),
+           work_order_photos(id, url, caption, created_at, photographer:profiles(full_name, preferred_name))`
+        )
+        .eq("id", id)
+        .single(),
+      supabase
+        .from("profiles")
+        .select("id, full_name, preferred_name")
+        .in("role", ["field", "manager", "admin", "owner", "xpress_pumping"])
+        .eq("is_active", true)
+        .order("full_name"),
+      supabase
+        .from("inventory_movements")
+        .select("delta, inventory_items(name, unit_cost)")
+        .eq("work_order_id", id)
+        .lt("delta", 0),
+    ]);
 
   if (!wo) notFound();
 
@@ -194,6 +201,115 @@ export default async function WorkOrderDetailPage({
           {duration(wo.created_at, wo.completed_at)}
         </div>
       )}
+
+      {["owner", "admin", "manager"].includes(me?.role ?? "") &&
+        (() => {
+          const assigneeRate =
+            (wo.assignee as unknown as { hourly_cost: number | null } | null)
+              ?.hourly_cost ?? null;
+          const laborMinutes =
+            wo.minutes_on_site ??
+            (wo.started_at && wo.completed_at
+              ? Math.round(
+                  (new Date(wo.completed_at).getTime() -
+                    new Date(wo.started_at).getTime()) /
+                    60000
+                )
+              : 0);
+          const laborCost = assigneeRate
+            ? (laborMinutes / 60) * Number(assigneeRate)
+            : null;
+          const parts = (partsUsed ?? []).map((m) => {
+            const item = m.inventory_items as unknown as {
+              name: string;
+              unit_cost: number | null;
+            } | null;
+            return {
+              name: item?.name ?? "part",
+              qty: -m.delta,
+              cost: item?.unit_cost ? -m.delta * Number(item.unit_cost) : 0,
+            };
+          });
+          const partsCost = parts.reduce((s, p) => s + p.cost, 0);
+          const invoice = wo.invoice as unknown as {
+            number: number;
+            tax_rate: number;
+            line_items: { quantity: number; unit_price: number }[];
+          } | null;
+          const revenue = invoice
+            ? invoice.line_items.reduce(
+                (s, i) => s + Number(i.quantity) * Number(i.unit_price),
+                0
+              ) *
+              (1 + Number(invoice.tax_rate))
+            : null;
+          const totalCost = (laborCost ?? 0) + partsCost;
+          const hasData =
+            laborCost !== null || parts.length > 0 || revenue !== null;
+          if (!hasData) return null;
+
+          const fmt = (n: number) =>
+            n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+
+          return (
+            <div className="bg-white rounded-2xl border border-[#e4e9f1] p-5 mb-6 shadow-sm">
+              <h2 className="text-sm font-extrabold tracking-wider text-[#b9700f] uppercase mb-3">
+                Job costing
+              </h2>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <div className="text-xs font-bold text-[#5a6b85] uppercase mb-1">
+                    Labor
+                  </div>
+                  <div className="font-bold">
+                    {laborCost !== null
+                      ? `${fmt(laborCost)} (${laborMinutes} min)`
+                      : laborMinutes
+                        ? `${laborMinutes} min — set tech's $/hr on Team`
+                        : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-[#5a6b85] uppercase mb-1">
+                    Parts ({parts.length})
+                  </div>
+                  <div className="font-bold">{fmt(partsCost)}</div>
+                  {parts.length > 0 && (
+                    <div className="text-xs text-[#5a6b85] mt-0.5">
+                      {parts.map((p) => `${p.qty}× ${p.name}`).join(", ")}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-[#5a6b85] uppercase mb-1">
+                    Revenue
+                  </div>
+                  <div className="font-bold">
+                    {revenue !== null ? fmt(revenue) : "no linked invoice"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-[#5a6b85] uppercase mb-1">
+                    Margin
+                  </div>
+                  <div
+                    className={`font-bold ${
+                      revenue !== null
+                        ? revenue - totalCost >= 0
+                          ? "text-[#1f9d63]"
+                          : "text-[#d24b4b]"
+                        : ""
+                    }`}
+                  >
+                    {revenue !== null
+                      ? `${fmt(revenue - totalCost)} (${revenue > 0 ? Math.round(((revenue - totalCost) / revenue) * 100) : 0}%)`
+                      : "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>

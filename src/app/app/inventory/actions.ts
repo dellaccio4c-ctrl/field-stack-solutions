@@ -58,7 +58,12 @@ export async function updateInventoryItem(id: string, formData: FormData) {
   return { error: null };
 }
 
-export async function adjustStock(id: string, delta: number, reason: string) {
+export async function adjustStock(
+  id: string,
+  delta: number,
+  reason: string,
+  workOrderId?: string | null
+) {
   if (!delta) return { error: "Enter a quantity change." };
   const supabase = await createClient();
   const {
@@ -86,9 +91,11 @@ export async function adjustStock(id: string, delta: number, reason: string) {
     item_id: id,
     delta,
     reason: reason.trim() || null,
+    work_order_id: workOrderId || null,
     actor: user!.id,
   });
   revalidatePath("/app/inventory");
+  if (workOrderId) revalidatePath(`/app/work-orders/${workOrderId}`);
   return { error: null };
 }
 

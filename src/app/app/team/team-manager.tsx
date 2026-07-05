@@ -20,6 +20,7 @@ type Member = {
   legal_first_name: string | null;
   legal_last_name: string | null;
   preferred_name: string | null;
+  hourly_cost: number | null;
 };
 
 const STAFF_ROLES: UserRole[] = [
@@ -366,6 +367,22 @@ export function TeamManager({
                     name="hire_date"
                     type="date"
                     defaultValue={editing.hire_date ?? ""}
+                    className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 focus:outline-none focus:border-[#ff8a1e]"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-[#0e1726] mb-1">
+                    Labor cost ($/hour)
+                  </label>
+                  <input
+                    name="hourly_cost"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    defaultValue={editing.hourly_cost ?? ""}
+                    placeholder="used for job costing"
                     className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 focus:outline-none focus:border-[#ff8a1e]"
                   />
                 </div>

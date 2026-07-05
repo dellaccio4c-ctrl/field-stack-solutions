@@ -20,15 +20,22 @@ export default async function InventoryPage({
       `name.ilike.%${q}%,sku.ilike.%${q}%,serial_number.ilike.%${q}%,brand.ilike.%${q}%,model.ilike.%${q}%,storage_location.ilike.%${q}%`
     );
 
-  const [{ data: items }, { data: staff }] = await Promise.all([
-    query,
-    supabase
-      .from("profiles")
-      .select("id, full_name, preferred_name")
-      .neq("role", "customer")
-      .eq("is_active", true)
-      .order("full_name"),
-  ]);
+  const [{ data: items }, { data: staff }, { data: openWorkOrders }] =
+    await Promise.all([
+      query,
+      supabase
+        .from("profiles")
+        .select("id, full_name, preferred_name")
+        .neq("role", "customer")
+        .eq("is_active", true)
+        .order("full_name"),
+      supabase
+        .from("work_orders")
+        .select("id, number, title")
+        .in("status", ["open", "scheduled", "in_progress", "on_hold"])
+        .order("number", { ascending: false })
+        .limit(100),
+    ]);
 
   const filtered = (items ?? []).filter(
     (i) => !low || i.quantity <= i.min_quantity
@@ -96,7 +103,11 @@ export default async function InventoryPage({
         </form>
       </div>
 
-      <InventoryManager items={filtered} staff={staff ?? []} />
+      <InventoryManager
+        items={filtered}
+        staff={staff ?? []}
+        openWorkOrders={openWorkOrders ?? []}
+      />
     </div>
   );
 }
