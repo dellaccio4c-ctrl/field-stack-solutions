@@ -9,6 +9,7 @@ export async function createCatalogItem(formData: FormData) {
     name: String(formData.get("name") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim() || null,
     unit_price: parseFloat(String(formData.get("unit_price") || "0")),
+    image_url: String(formData.get("image_url") ?? "").trim() || null,
   });
   if (error) return { error: error.message };
   revalidatePath("/app/catalog");
@@ -23,6 +24,7 @@ export async function updateCatalogItem(id: string, formData: FormData) {
       name: String(formData.get("name") ?? "").trim(),
       description: String(formData.get("description") ?? "").trim() || null,
       unit_price: parseFloat(String(formData.get("unit_price") || "0")),
+      image_url: String(formData.get("image_url") ?? "").trim() || null,
     })
     .eq("id", id);
   if (error) return { error: error.message };

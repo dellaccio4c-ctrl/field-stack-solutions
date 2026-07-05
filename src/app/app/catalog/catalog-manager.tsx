@@ -6,6 +6,7 @@ import {
   updateCatalogItem,
   toggleCatalogItem,
 } from "./actions";
+import { createClient } from "@/lib/supabase/client";
 
 type Item = {
   id: string;
@@ -13,6 +14,7 @@ type Item = {
   description: string | null;
   unit_price: number;
   is_active: boolean;
+  image_url: string | null;
   priceLabel: string;
 };
 
@@ -25,6 +27,31 @@ export function CatalogManager({ items }: { items: Item[] }) {
   async function handleSubmit(formData: FormData) {
     setSaving(true);
     setError(null);
+
+    // Upload the photo (if one was chosen) before saving the item.
+    const file = formData.get("image_file") as File | null;
+    if (file && file.size > 0) {
+      if (file.size > 5 * 1024 * 1024) {
+        setSaving(false);
+        setError("Image must be under 5 MB.");
+        return;
+      }
+      const supabase = createClient();
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("catalog")
+        .upload(path, file, { contentType: file.type });
+      if (upErr) {
+        setSaving(false);
+        setError(`Image upload failed: ${upErr.message}`);
+        return;
+      }
+      const { data } = supabase.storage.from("catalog").getPublicUrl(path);
+      formData.set("image_url", data.publicUrl);
+    }
+    formData.delete("image_file");
+
     const result =
       editing === "new"
         ? await createCatalogItem(formData)
@@ -59,6 +86,7 @@ export function CatalogManager({ items }: { items: Item[] }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[#5a6b85] border-b border-[#e4e9f1]">
+                <th className="px-5 py-3.5 font-semibold w-20">Photo</th>
                 <th className="px-5 py-3.5 font-semibold">Service</th>
                 <th className="px-5 py-3.5 font-semibold">Description</th>
                 <th className="px-5 py-3.5 font-semibold text-right">Price</th>
@@ -74,6 +102,18 @@ export function CatalogManager({ items }: { items: Item[] }) {
                     !it.is_active ? "opacity-50" : ""
                   }`}
                 >
+                  <td className="px-5 py-3.5">
+                    {it.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={it.image_url}
+                        alt={it.name}
+                        className="w-12 h-12 rounded-lg object-cover border border-[#e4e9f1]"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-[#f5f7fb] border border-[#e4e9f1]" />
+                    )}
+                  </td>
                   <td className="px-5 py-3.5 font-semibold">{it.name}</td>
                   <td className="px-5 py-3.5 text-[#5a6b85]">
                     {it.description ?? "—"}
@@ -153,6 +193,30 @@ export function CatalogManager({ items }: { items: Item[] }) {
                   required
                   defaultValue={current ? Number(current.unit_price) : undefined}
                   className="w-40 border border-[#e4e9f1] rounded-lg px-3 py-2 focus:outline-none focus:border-[#ff8a1e]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-[#0e1726] mb-1">
+                  Photo
+                </label>
+                {current?.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={current.image_url}
+                    alt=""
+                    className="w-20 h-20 rounded-lg object-cover border border-[#e4e9f1] mb-2"
+                  />
+                )}
+                <input
+                  name="image_file"
+                  type="file"
+                  accept="image/*"
+                  className="w-full text-sm text-[#5a6b85] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#fff2e3] file:text-[#b9700f] file:font-semibold file:cursor-pointer"
+                />
+                <input
+                  type="hidden"
+                  name="image_url"
+                  defaultValue={current?.image_url ?? ""}
                 />
               </div>
               {error && (
