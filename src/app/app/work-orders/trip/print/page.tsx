@@ -13,17 +13,37 @@ export default async function TripPrintPage({
   const includeMaybe = include !== "yes-only";
 
   const supabase = await createClient();
-  const picks = includeMaybe ? ["yes", "maybe"] : ["yes"];
-  const { data: orders } = await supabase
-    .from("work_orders")
-    .select(
-      "id, number, title, description, priority, trip_pick, address, city, state, zip, scheduled_date, customers(name, phone), locations(label)"
-    )
-    .in("status", OPEN_STATUSES)
-    .eq("state", selected)
-    .in("trip_pick", picks)
-    .order("trip_pick")
-    .order("city");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const pickValues = includeMaybe ? ["yes", "maybe"] : ["yes"];
+
+  // My picks only — each employee prints their own trip sheet.
+  const { data: myPicks } = await supabase
+    .from("trip_picks")
+    .select("work_order_id, pick")
+    .eq("user_id", user!.id)
+    .in("pick", pickValues);
+
+  const pickMap = new Map(
+    (myPicks ?? []).map((p) => [p.work_order_id, p.pick])
+  );
+
+  const { data: allOrders } = pickMap.size
+    ? await supabase
+        .from("work_orders")
+        .select(
+          "id, number, title, description, priority, address, city, state, zip, scheduled_date, customers(name, phone), locations(label)"
+        )
+        .in("status", OPEN_STATUSES)
+        .eq("state", selected)
+        .in("id", [...pickMap.keys()])
+        .order("city")
+    : { data: [] };
+
+  const orders = (allOrders ?? [])
+    .map((wo) => ({ ...wo, trip_pick: pickMap.get(wo.id) ?? "yes" }))
+    .sort((a, b) => a.trip_pick.localeCompare(b.trip_pick) * -1); // yes first
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",

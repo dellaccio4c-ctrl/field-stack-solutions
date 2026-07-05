@@ -3,7 +3,9 @@
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { divIcon } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { TripOrder } from "./trip-board";
+import type { TripOrder as BaseTripOrder } from "./trip-board";
+
+type TripOrder = BaseTripOrder & { trip_pick: string | null };
 
 function pinIcon(color: string) {
   return divIcon({

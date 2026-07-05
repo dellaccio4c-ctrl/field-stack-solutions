@@ -54,7 +54,7 @@ export default async function WorkOrderDetailPage({
     supabase
       .from("work_orders")
       .select(
-        `*, customers(name), locations(label),
+        `*, customers(name), locations(label), equipment(id, name, unit_number, serial_number),
          assignee:profiles!work_orders_assigned_to_fkey(full_name, preferred_name),
          creator:profiles!work_orders_created_by_fkey(full_name, preferred_name),
          work_order_events(id, kind, detail, created_at, actor:profiles(full_name, preferred_name)),
@@ -166,6 +166,21 @@ export default async function WorkOrderDetailPage({
         <Fact label="Completed">
           {wo.completed_at ? fmtTs(wo.completed_at) : "—"}
         </Fact>
+        {wo.equipment && (
+          <Fact label="Equipment">
+            <Link
+              href={`/app/equipment/${(wo.equipment as unknown as { id: string }).id}`}
+              className="hover:text-[#b9700f]"
+            >
+              {(wo.equipment as unknown as { name: string }).name}
+              {(wo.equipment as unknown as { unit_number: string | null })
+                .unit_number
+                ? ` (Unit ${(wo.equipment as unknown as { unit_number: string }).unit_number})`
+                : ""}
+              {" →"}
+            </Link>
+          </Fact>
+        )}
       </div>
 
       {isOwner && wo.completed_at && (

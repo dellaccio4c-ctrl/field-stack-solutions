@@ -16,13 +16,22 @@ type Customer = {
   }[];
 };
 type Staff = { id: string; full_name: string; preferred_name: string | null };
+type Equipment = {
+  id: string;
+  name: string;
+  unit_number: string | null;
+  customer_id: string | null;
+  location_id: string | null;
+};
 
 export function NewWorkOrderModal({
   customers,
   staff,
+  equipment = [],
 }: {
   customers: Customer[];
   staff: Staff[];
+  equipment?: Equipment[];
 }) {
   const [open, setOpen] = useState(false);
   const [customerId, setCustomerId] = useState("");
@@ -32,6 +41,12 @@ export function NewWorkOrderModal({
 
   const selected = customers.find((c) => c.id === customerId);
   const usingSite = Boolean(locationId);
+  // Equipment narrowed by chosen customer/site (all shown if none chosen).
+  const availableEquipment = equipment.filter((e) => {
+    if (locationId) return e.location_id === locationId;
+    if (customerId) return e.customer_id === customerId;
+    return true;
+  });
 
   async function handleSubmit(formData: FormData) {
     setSaving(true);
@@ -201,6 +216,26 @@ export function NewWorkOrderModal({
                   />
                 </div>
               </div>
+
+              {availableEquipment.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-[#0e1726] mb-1">
+                    Equipment (builds lifetime service history)
+                  </label>
+                  <select
+                    name="equipment_id"
+                    className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#ff8a1e]"
+                  >
+                    <option value="">— none —</option>
+                    {availableEquipment.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.name}
+                        {e.unit_number ? ` (Unit ${e.unit_number})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <label className="flex items-center gap-2 text-sm font-semibold text-[#0e1726] cursor-pointer">
                 <input type="checkbox" name="is_pumping" className="w-4 h-4" />

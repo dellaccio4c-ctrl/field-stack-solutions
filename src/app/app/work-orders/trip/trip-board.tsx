@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { createClient } from "@/lib/supabase/client";
 import { setTripPick, clearTripPicks } from "../actions";
 import { PriorityBadge, StatusBadge } from "../../status-badge";
 
@@ -25,7 +27,6 @@ export type TripOrder = {
   description: string | null;
   status: string;
   priority: string;
-  trip_pick: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -37,49 +38,101 @@ export type TripOrder = {
   customers: unknown;
 };
 
+export type Pick = {
+  work_order_id: string;
+  user_id: string;
+  pick: string;
+  name: string;
+};
+
+const PICK_CHIP: Record<string, string> = {
+  yes: "bg-[#e3f6ec] text-[#1f9d63]",
+  maybe: "bg-[#fff2e3] text-[#b9700f]",
+  no: "bg-[#eef1f6] text-[#5a6b85]",
+};
+
 export function TripBoard({
   state,
   orders,
+  initialPicks,
+  myUserId,
 }: {
   state: string;
   orders: TripOrder[];
+  initialPicks: Pick[];
+  myUserId: string;
 }) {
-  // Optimistic picks so the buttons feel instant.
-  const [picks, setPicks] = useState<Record<string, string | null>>(
-    Object.fromEntries(orders.map((o) => [o.id, o.trip_pick]))
-  );
+  const router = useRouter();
+  const [picks, setPicks] = useState<Pick[]>(initialPicks);
   const [busy, setBusy] = useState<string | null>(null);
 
+  // Live updates: refresh picks whenever anyone on the team changes theirs.
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("trip-picks-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "trip_picks" },
+        () => router.refresh()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [router]);
+
+  // Keep local state in sync when the server refreshes.
+  useEffect(() => setPicks(initialPicks), [initialPicks]);
+
+  function myPick(woId: string) {
+    return picks.find((p) => p.work_order_id === woId && p.user_id === myUserId)
+      ?.pick;
+  }
+  function teamPicks(woId: string) {
+    return picks.filter(
+      (p) => p.work_order_id === woId && p.user_id !== myUserId
+    );
+  }
+
   async function pick(id: string, value: "yes" | "no" | "maybe") {
-    setPicks((p) => ({ ...p, [id]: value }));
+    setPicks((prev) => [
+      ...prev.filter(
+        (p) => !(p.work_order_id === id && p.user_id === myUserId)
+      ),
+      { work_order_id: id, user_id: myUserId, pick: value, name: "You" },
+    ]);
     setBusy(id);
     await setTripPick(id, value);
     setBusy(null);
   }
 
   async function resetPicks() {
-    setPicks(Object.fromEntries(orders.map((o) => [o.id, null])));
+    setPicks((prev) => prev.filter((p) => p.user_id !== myUserId));
     await clearTripPicks(state);
   }
 
   const counts = useMemo(() => {
-    const values = Object.values(picks);
+    const mine = picks.filter((p) => p.user_id === myUserId);
     return {
-      yes: values.filter((v) => v === "yes").length,
-      maybe: values.filter((v) => v === "maybe").length,
-      no: values.filter((v) => v === "no").length,
+      yes: mine.filter((p) => p.pick === "yes").length,
+      maybe: mine.filter((p) => p.pick === "maybe").length,
+      no: mine.filter((p) => p.pick === "no").length,
     };
-  }, [picks]);
+  }, [picks, myUserId]);
 
   return (
     <>
       <TripMap
-        orders={orders.map((o) => ({ ...o, trip_pick: picks[o.id] ?? null }))}
+        orders={orders.map((o) => ({
+          ...o,
+          trip_pick: myPick(o.id) ?? null,
+        }))}
       />
 
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div className="text-sm font-semibold text-[#0e1726]">
-          {orders.length} open in {state} ·{" "}
+          {orders.length} open in {state} · your picks:{" "}
           <span className="text-[#1f9d63]">{counts.yes} yes</span> ·{" "}
           <span className="text-[#b9700f]">{counts.maybe} maybe</span> ·{" "}
           <span className="text-[#d24b4b]">{counts.no} no</span>
@@ -89,7 +142,7 @@ export function TripBoard({
             onClick={resetPicks}
             className="bg-white border border-[#e4e9f1] hover:border-[#ff8a1e] text-[#0e1726] font-semibold rounded-lg px-4 py-2 text-sm transition"
           >
-            Reset picks
+            Reset my picks
           </button>
           <Link
             href={`/app/work-orders/trip/print?state=${state}`}
@@ -99,14 +152,15 @@ export function TripBoard({
                 : "bg-[#eef1f6] text-[#5a6b85] pointer-events-none"
             }`}
           >
-            🖨 Print trip sheet ({counts.yes + counts.maybe})
+            🖨 Print my trip sheet ({counts.yes + counts.maybe})
           </Link>
         </div>
       </div>
 
       <div className="space-y-3">
         {orders.map((wo) => {
-          const current = picks[wo.id];
+          const current = myPick(wo.id);
+          const others = teamPicks(wo.id);
           return (
             <div
               key={wo.id}
@@ -147,6 +201,21 @@ export function TripBoard({
                   {wo.description && (
                     <div className="text-sm text-[#5a6b85] mt-1 line-clamp-2">
                       {wo.description}
+                    </div>
+                  )}
+                  {others.length > 0 && (
+                    <div className="flex gap-1.5 mt-2 flex-wrap">
+                      {others.map((p) => (
+                        <span
+                          key={p.user_id}
+                          className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                            PICK_CHIP[p.pick] ?? PICK_CHIP.no
+                          }`}
+                          title={`${p.name}: ${p.pick}`}
+                        >
+                          {p.name}: {p.pick}
+                        </span>
+                      ))}
                     </div>
                   )}
                 </div>

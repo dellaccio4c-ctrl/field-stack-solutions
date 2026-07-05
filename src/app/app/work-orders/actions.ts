@@ -66,6 +66,7 @@ export async function createWorkOrder(formData: FormData) {
       lng: coords?.lng ?? null,
       assigned_to: String(formData.get("assigned_to") ?? "") || null,
       scheduled_date: String(formData.get("scheduled_date") || "") || null,
+      equipment_id: String(formData.get("equipment_id") ?? "") || null,
       created_by: user!.id,
     })
     .select("id")
@@ -172,23 +173,41 @@ export async function recordWorkOrderPhoto(
 
 export async function setTripPick(id: string, pick: "yes" | "no" | "maybe") {
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("work_orders")
-    .update({ trip_pick: pick })
-    .eq("id", id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { error } = await supabase.from("trip_picks").upsert({
+    work_order_id: id,
+    user_id: user!.id,
+    pick,
+    updated_at: new Date().toISOString(),
+  });
   if (error) return { error: error.message };
   revalidatePath("/app/work-orders/trip");
   return { error: null };
 }
 
+// Clears only YOUR picks for the given state.
 export async function clearTripPicks(state: string) {
   const supabase = await createClient();
-  const { error } = await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: ids } = await supabase
     .from("work_orders")
-    .update({ trip_pick: null })
-    .eq("state", state)
-    .not("trip_pick", "is", null);
-  if (error) return { error: error.message };
+    .select("id")
+    .eq("state", state);
+  if (ids?.length) {
+    const { error } = await supabase
+      .from("trip_picks")
+      .delete()
+      .eq("user_id", user!.id)
+      .in(
+        "work_order_id",
+        ids.map((r) => r.id)
+      );
+    if (error) return { error: error.message };
+  }
   revalidatePath("/app/work-orders/trip");
   return { error: null };
 }

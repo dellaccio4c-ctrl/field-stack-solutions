@@ -26,7 +26,7 @@ export default async function WorkOrdersPage({
   if (state) query = query.eq("state", state.toUpperCase());
   if (assignee) query = query.eq("assigned_to", assignee);
 
-  const [{ data: orders }, { data: customers }, { data: staff }] =
+  const [{ data: orders }, { data: customers }, { data: staff }, { data: equipment }] =
     await Promise.all([
       query,
       supabase
@@ -39,6 +39,11 @@ export default async function WorkOrdersPage({
         .in("role", ["field", "manager", "admin", "owner", "xpress_pumping"])
         .eq("is_active", true)
         .order("full_name"),
+      supabase
+        .from("equipment")
+        .select("id, name, unit_number, customer_id, location_id")
+        .eq("status", "active")
+        .order("name"),
     ]);
 
   const filters = [
@@ -63,7 +68,11 @@ export default async function WorkOrdersPage({
           >
             🗺 Trip Planner
           </Link>
-          <NewWorkOrderModal customers={customers ?? []} staff={staff ?? []} />
+          <NewWorkOrderModal
+            customers={customers ?? []}
+            staff={staff ?? []}
+            equipment={equipment ?? []}
+          />
         </div>
       </div>
 

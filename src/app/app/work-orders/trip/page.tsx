@@ -11,6 +11,9 @@ export default async function TripPlannerPage({
 }) {
   const { state } = await searchParams;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // States that currently have open work, with counts.
   const { data: allOpen } = await supabase
@@ -29,17 +32,37 @@ export default async function TripPlannerPage({
   );
 
   const selected = state?.toUpperCase() ?? null;
-  const { data: orders } = selected
-    ? await supabase
-        .from("work_orders")
-        .select(
-          "id, number, title, description, status, priority, trip_pick, address, city, state, zip, lat, lng, scheduled_date, is_pumping, customers(name)"
-        )
-        .in("status", OPEN_STATUSES)
-        .eq("state", selected)
-        .order("priority", { ascending: false })
-        .order("created_at")
-    : { data: null };
+  let orders = null;
+  let picks: {
+    work_order_id: string;
+    user_id: string;
+    pick: string;
+    profiles: { full_name: string; preferred_name: string | null } | null;
+  }[] = [];
+
+  if (selected) {
+    const { data } = await supabase
+      .from("work_orders")
+      .select(
+        "id, number, title, description, status, priority, address, city, state, zip, lat, lng, scheduled_date, is_pumping, customers(name)"
+      )
+      .in("status", OPEN_STATUSES)
+      .eq("state", selected)
+      .order("priority", { ascending: false })
+      .order("created_at");
+    orders = data;
+
+    if (data?.length) {
+      const { data: pickRows } = await supabase
+        .from("trip_picks")
+        .select("work_order_id, user_id, pick, profiles(full_name, preferred_name)")
+        .in(
+          "work_order_id",
+          data.map((o) => o.id)
+        );
+      picks = (pickRows ?? []) as unknown as typeof picks;
+    }
+  }
 
   return (
     <div>
@@ -53,10 +76,11 @@ export default async function TripPlannerPage({
         Trip Planner
       </h1>
       <p className="text-[#5a6b85] mb-6">
-        Heading somewhere? Pick a state to see every open work order there,
-        mark <b className="text-[#1f9d63]">Yes</b> /{" "}
+        Heading somewhere? Pick a state, mark{" "}
+        <b className="text-[#1f9d63]">Yes</b> /{" "}
         <b className="text-[#b9700f]">Maybe</b> /{" "}
-        <b className="text-[#d24b4b]">No</b>, then print your trip sheet.
+        <b className="text-[#d24b4b]">No</b>, and print your trip sheet. Picks
+        are per person — you can see your teammates&apos; picks live.
       </p>
 
       <div className="flex items-center gap-2 mb-6 flex-wrap">
@@ -90,7 +114,19 @@ export default async function TripPlannerPage({
       </div>
 
       {selected && orders && (
-        <TripBoard state={selected} orders={orders} />
+        <TripBoard
+          state={selected}
+          orders={orders}
+          initialPicks={picks.map((p) => ({
+            work_order_id: p.work_order_id,
+            user_id: p.user_id,
+            pick: p.pick,
+            name: p.profiles
+              ? p.profiles.preferred_name || p.profiles.full_name
+              : "Teammate",
+          }))}
+          myUserId={user!.id}
+        />
       )}
     </div>
   );
