@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AddLocationForm } from "./add-location-form";
 import { PortalLoginForm } from "./portal-login-form";
+import { BackLink } from "../../back-link";
 
 export default async function CustomerDetailPage({
   params,
@@ -22,12 +23,7 @@ export default async function CustomerDetailPage({
 
   return (
     <div>
-      <Link
-        href="/app/customers"
-        className="text-sm text-[#5a6b85] hover:text-[#b9700f]"
-      >
-        ← All customers
-      </Link>
+      <BackLink fallback="/app/customers" label="All customers" />
       <div className="flex items-start justify-between mt-2 mb-6">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-[#0e1726]">

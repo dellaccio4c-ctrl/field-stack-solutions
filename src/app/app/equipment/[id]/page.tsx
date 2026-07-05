@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "../../status-badge";
 import { EquipmentQr } from "./equipment-qr";
+import { BackLink } from "../../back-link";
 
 function fmtTs(ts: string) {
   return new Date(ts).toLocaleString(undefined, {
@@ -48,12 +49,7 @@ export default async function EquipmentDetailPage({
 
   return (
     <div>
-      <Link
-        href="/app/equipment"
-        className="text-sm text-[#5a6b85] hover:text-[#b9700f]"
-      >
-        ← All equipment
-      </Link>
+      <BackLink fallback="/app/equipment" label="All equipment" />
 
       <div className="flex items-start justify-between mt-2 mb-6 flex-wrap gap-4">
         <div>

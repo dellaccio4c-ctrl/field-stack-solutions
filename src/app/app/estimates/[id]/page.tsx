@@ -5,6 +5,7 @@ import { money, subtotal } from "@/lib/money";
 import { StatusBadge } from "../../status-badge";
 import { LineItemsEditor } from "./line-items-editor";
 import { EstimateActions } from "./estimate-actions";
+import { BackLink } from "../../back-link";
 
 export default async function EstimateDetailPage({
   params,
@@ -24,6 +25,13 @@ export default async function EstimateDetailPage({
 
   if (!est) notFound();
 
+  // If this estimate was converted, link forward to the invoice.
+  const { data: resultingInvoice } = await supabase
+    .from("invoices")
+    .select("id, number")
+    .eq("estimate_id", est.id)
+    .maybeSingle();
+
   const { data: catalog } = await supabase
     .from("catalog_items")
     .select("id, name, description, unit_price")
@@ -40,12 +48,7 @@ export default async function EstimateDetailPage({
 
   return (
     <div>
-      <Link
-        href="/app/estimates"
-        className="text-sm text-[#5a6b85] hover:text-[#b9700f]"
-      >
-        ← All estimates
-      </Link>
+      <BackLink fallback="/app/estimates" label="All estimates" />
 
       <div className="flex items-start justify-between mt-2 mb-6 flex-wrap gap-4">
         <div>
@@ -67,6 +70,17 @@ export default async function EstimateDetailPage({
               ? ` — ${(est.locations as { label: string }).label}`
               : ""}
           </div>
+          {resultingInvoice && (
+            <div className="mt-2">
+              <Link
+                href={`/app/invoices/${resultingInvoice.id}`}
+                className="text-xs font-semibold bg-[#f5f7fb] border border-[#e4e9f1] rounded-full px-2.5 py-1 text-[#5a6b85] hover:border-[#ff8a1e] hover:text-[#b9700f] transition"
+              >
+                💳 Invoiced as INV-
+                {String(resultingInvoice.number).padStart(4, "0")} →
+              </Link>
+            </div>
+          )}
         </div>
         <EstimateActions estimateId={est.id} status={est.status} />
       </div>

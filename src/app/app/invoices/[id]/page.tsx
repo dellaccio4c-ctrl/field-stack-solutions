@@ -5,6 +5,7 @@ import { money, subtotal } from "@/lib/money";
 import { StatusBadge } from "../../status-badge";
 import { InvoiceItemsEditor } from "./invoice-items-editor";
 import { InvoiceActions } from "./invoice-actions";
+import { BackLink } from "../../back-link";
 
 export default async function InvoiceDetailPage({
   params,
@@ -23,6 +24,22 @@ export default async function InvoiceDetailPage({
     .single();
 
   if (!inv) notFound();
+
+  // Related records for cross-navigation
+  const [{ data: sourceWO }, { data: sourceEstimate }] = await Promise.all([
+    supabase
+      .from("work_orders")
+      .select("id, number")
+      .eq("invoice_id", inv.id)
+      .maybeSingle(),
+    inv.estimate_id
+      ? supabase
+          .from("estimates")
+          .select("id, number")
+          .eq("id", inv.estimate_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
   const { data: catalog } = await supabase
     .from("catalog_items")
@@ -45,12 +62,7 @@ export default async function InvoiceDetailPage({
 
   return (
     <div>
-      <Link
-        href="/app/invoices"
-        className="text-sm text-[#5a6b85] hover:text-[#b9700f]"
-      >
-        ← All invoices
-      </Link>
+      <BackLink fallback="/app/invoices" scope="/app" label="Back" />
 
       <div className="flex items-start justify-between mt-2 mb-6 flex-wrap gap-4">
         <div>
@@ -72,6 +84,26 @@ export default async function InvoiceDetailPage({
               ? ` — ${(inv.locations as { label: string }).label}`
               : ""}
           </div>
+          {(sourceWO || sourceEstimate) && (
+            <div className="flex gap-2 mt-2">
+              {sourceWO && (
+                <Link
+                  href={`/app/work-orders/${sourceWO.id}`}
+                  className="text-xs font-semibold bg-[#f5f7fb] border border-[#e4e9f1] rounded-full px-2.5 py-1 text-[#5a6b85] hover:border-[#ff8a1e] hover:text-[#b9700f] transition"
+                >
+                  🔧 From WO-{String(sourceWO.number).padStart(4, "0")}
+                </Link>
+              )}
+              {sourceEstimate && (
+                <Link
+                  href={`/app/estimates/${sourceEstimate.id}`}
+                  className="text-xs font-semibold bg-[#f5f7fb] border border-[#e4e9f1] rounded-full px-2.5 py-1 text-[#5a6b85] hover:border-[#ff8a1e] hover:text-[#b9700f] transition"
+                >
+                  📄 From EST-{String(sourceEstimate.number).padStart(4, "0")}
+                </Link>
+              )}
+            </div>
+          )}
         </div>
         <InvoiceActions
           invoiceId={inv.id}

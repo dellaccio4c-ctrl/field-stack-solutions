@@ -6,6 +6,7 @@ import { WorkOrderActions } from "./work-order-actions";
 import { PhotoSection } from "./photo-section";
 import { NoteForm } from "./note-form";
 import { SlaBadge } from "../sla-badge";
+import { BackLink } from "../../back-link";
 
 function fmtTs(ts: string) {
   return new Date(ts).toLocaleString(undefined, {
@@ -99,12 +100,7 @@ export default async function WorkOrderDetailPage({
 
   return (
     <div>
-      <Link
-        href="/app/work-orders"
-        className="text-sm text-[#5a6b85] hover:text-[#b9700f]"
-      >
-        ← All work orders
-      </Link>
+      <BackLink fallback="/app/work-orders" label="All work orders" />
 
       <div className="flex items-start justify-between mt-2 mb-6 flex-wrap gap-4">
         <div>
@@ -173,6 +169,20 @@ export default async function WorkOrderDetailPage({
         <Fact label="Completed">
           {wo.completed_at ? fmtTs(wo.completed_at) : "—"}
         </Fact>
+        {wo.invoice && (
+          <Fact label="Invoice">
+            <Link
+              href={`/app/invoices/${(wo.invoice as unknown as { id: string }).id}`}
+              className="hover:text-[#b9700f]"
+            >
+              INV-
+              {String(
+                (wo.invoice as unknown as { number: number }).number
+              ).padStart(4, "0")}
+              {" →"}
+            </Link>
+          </Fact>
+        )}
         {wo.equipment && (
           <Fact label="Equipment">
             <Link
