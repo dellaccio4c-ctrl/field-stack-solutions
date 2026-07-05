@@ -140,6 +140,10 @@ export function AddExpenseForm({ customers }: { customers: Customer[] }) {
                   </select>
                 </div>
               </div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-[#0e1726] cursor-pointer">
+                <input type="checkbox" name="is_pumping" className="w-4 h-4" />
+                Pumping division expense
+              </label>
               {error && (
                 <div className="text-sm text-[#d24b4b] bg-[#fbe7e7] rounded-lg px-3 py-2">
                   {error}

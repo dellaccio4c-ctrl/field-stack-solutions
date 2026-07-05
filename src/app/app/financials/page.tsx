@@ -15,7 +15,8 @@ export default async function FinancialsPage() {
     .select("role")
     .eq("id", user!.id)
     .single();
-  if (me?.role !== "owner") redirect("/app");
+  const isXpress = me?.role === "xpress_pumping";
+  if (me?.role !== "owner" && !isXpress) redirect("/app");
 
   const [{ data: invoices }, { data: payments }, { data: expenses }, { data: customers }, { data: staff }] =
     await Promise.all([
@@ -64,11 +65,15 @@ export default async function FinancialsPage() {
     <div>
       <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
         <h1 className="text-3xl font-extrabold tracking-tight text-[#0e1726]">
-          Financials
+          {isXpress ? "Pumping Financials" : "Financials"}
         </h1>
-        <AddExpenseForm customers={customers ?? []} />
+        {!isXpress && <AddExpenseForm customers={customers ?? []} />}
       </div>
-      <p className="text-[#5a6b85] mb-6">Owner-only view.</p>
+      <p className="text-[#5a6b85] mb-6">
+        {isXpress
+          ? "Pumping-division invoices, payments, and expenses."
+          : "Owner-only view."}
+      </p>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <Kpi label="Total revenue" value={money(totalRevenue)} accent="#1f9d63" />

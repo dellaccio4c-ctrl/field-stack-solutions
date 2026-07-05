@@ -22,6 +22,7 @@ export async function addExpense(formData: FormData) {
     vendor: String(formData.get("vendor") ?? "").trim() || null,
     customer_id: customerId || null,
     location_id: locationId || null,
+    is_pumping: formData.get("is_pumping") === "on",
     incurred_by: user!.id,
     incurred_at: String(formData.get("incurred_at") || new Date().toISOString().slice(0, 10)),
   });

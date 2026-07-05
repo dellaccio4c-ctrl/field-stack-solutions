@@ -19,6 +19,7 @@ export async function createEstimate(formData: FormData) {
       title: String(formData.get("title") ?? "").trim(),
       tax_rate: parseFloat(String(formData.get("tax_rate") || "0")) / 100,
       notes: String(formData.get("notes") ?? "").trim() || null,
+      is_pumping: formData.get("is_pumping") === "on",
       created_by: user!.id,
     })
     .select("id")
@@ -128,6 +129,7 @@ export async function convertToInvoice(estimateId: string) {
       title: est.title,
       tax_rate: est.tax_rate,
       notes: est.notes,
+      is_pumping: est.is_pumping,
       created_by: user!.id,
     })
     .select("id")

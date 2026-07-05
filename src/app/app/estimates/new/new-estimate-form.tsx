@@ -100,6 +100,14 @@ export function NewEstimateForm({ customers }: { customers: Customer[] }) {
         />
       </div>
 
+      <label className="flex items-center gap-2 text-sm font-semibold text-[#0e1726] cursor-pointer">
+        <input type="checkbox" name="is_pumping" className="w-4 h-4" />
+        Pumping division job
+        <span className="font-normal text-[#5a6b85]">
+          (visible to the Xpress Pumping team)
+        </span>
+      </label>
+
       <div>
         <label className="block text-sm font-semibold text-[#0e1726] mb-1">
           Notes

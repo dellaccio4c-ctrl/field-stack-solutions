@@ -59,6 +59,11 @@ export default async function InvoiceDetailPage({
               INV-{String(inv.number).padStart(4, "0")}
             </h1>
             <StatusBadge status={inv.status} />
+            {inv.is_pumping && (
+              <span className="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-[#e8f0fd] text-[#2f6fd6]">
+                Pumping
+              </span>
+            )}
           </div>
           <div className="text-[#0e1726] font-semibold mt-1">{inv.title}</div>
           <div className="text-sm text-[#5a6b85]">

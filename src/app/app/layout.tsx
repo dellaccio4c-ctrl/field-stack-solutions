@@ -27,6 +27,9 @@ export default async function AppLayout({
   // Xpress Pumping is a focused role: pump scheduling only.
   const xpressNav = [
     { href: "/app/dev/pump", label: "Pump Schedule", min: "customer" as UserRole },
+    { href: "/app/customers", label: "Customers", min: "customer" as UserRole },
+    { href: "/app/invoices", label: "Invoices", min: "customer" as UserRole },
+    { href: "/app/financials", label: "Financials", min: "customer" as UserRole },
     { href: "/app/account", label: "Account", min: "customer" as UserRole },
   ];
 

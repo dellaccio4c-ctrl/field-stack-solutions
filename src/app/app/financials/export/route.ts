@@ -31,7 +31,9 @@ export async function GET(req: Request) {
     .select("role")
     .eq("id", user.id)
     .single();
-  if (me?.role !== "owner")
+  // Owners export everything; Xpress Pumping exports only pumping rows
+  // (row-level security scopes their queries automatically).
+  if (me?.role !== "owner" && me?.role !== "xpress_pumping")
     return NextResponse.json({ error: "Owner access required" }, { status: 403 });
 
   const url = new URL(req.url);
