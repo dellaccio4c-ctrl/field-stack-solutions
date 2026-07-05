@@ -5,6 +5,7 @@ import { StatusBadge, PriorityBadge, WoTypeBadge } from "../../status-badge";
 import { WorkOrderActions } from "./work-order-actions";
 import { PhotoSection } from "./photo-section";
 import { NoteForm } from "./note-form";
+import { SlaBadge } from "../sla-badge";
 
 function fmtTs(ts: string) {
   return new Date(ts).toLocaleString(undefined, {
@@ -107,6 +108,7 @@ export default async function WorkOrderDetailPage({
             <StatusBadge status={wo.status} />
             <PriorityBadge priority={wo.priority} />
             <WoTypeBadge type={wo.wo_type} />
+            <SlaBadge wo={wo} />
           </div>
           <div className="text-[#0e1726] font-semibold mt-1 text-lg">
             {wo.title}

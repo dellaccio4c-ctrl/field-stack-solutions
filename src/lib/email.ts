@@ -45,6 +45,44 @@ export async function sendWelcomeEmail(opts: {
   return { error: error ? error.message : null };
 }
 
+export async function sendEstimateFollowUp(opts: {
+  to: string;
+  customerName: string;
+  number: string;
+  title: string;
+  total: string;
+  followUpNumber: number;
+}) {
+  if (!emailConfigured()) return { error: "Email not configured" };
+
+  const closing =
+    opts.followUpNumber >= 3
+      ? "If now isn't the right time, just let us know — we're happy to revisit whenever works for you."
+      : "If you have any questions or would like to adjust anything, just reply to this email.";
+
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: process.env.EMAIL_FROM!,
+    to: opts.to,
+    subject: `Following up on estimate ${opts.number} — ${COMPANY.name}`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto">
+        <div style="background:#0e1f38;padding:20px 24px;border-radius:12px 12px 0 0">
+          <span style="color:#fff;font-size:18px;font-weight:800">${COMPANY.name}</span>
+        </div>
+        <div style="border:1px solid #e4e9f1;border-top:0;padding:24px;border-radius:0 0 12px 12px">
+          <p>Hi ${opts.customerName},</p>
+          <p>Just checking in on estimate <b>${opts.number}</b> (${opts.title}) for <b>${opts.total}</b> — it's ready whenever you are.</p>
+          <p>You can review and approve it from your portal at
+          <a href="https://${COMPANY.website}/login" style="color:#b9700f">${COMPANY.website}</a>.</p>
+          <p>${closing}</p>
+          <p style="margin-top:24px">Thank you,<br/><b>${COMPANY.name}</b></p>
+        </div>
+      </div>`,
+  });
+  return { error: error ? error.message : null };
+}
+
 export async function sendDocumentEmail(opts: {
   to: string;
   kind: "Estimate" | "Invoice";
