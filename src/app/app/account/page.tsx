@@ -9,7 +9,9 @@ export default async function AccountPage() {
   } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, email, role")
+    .select(
+      "full_name, email, role, employee_code, job_title, phone, territory, hire_date"
+    )
     .eq("id", user!.id)
     .single();
 
@@ -41,6 +43,38 @@ export default async function AccountPage() {
               {ROLE_LABEL[(profile?.role ?? "readonly") as UserRole]}
             </div>
           </div>
+          {profile?.employee_code && (
+            <div>
+              <div className="text-xs font-bold tracking-wider text-[#5a6b85] uppercase mb-1">
+                Employee code
+              </div>
+              <div className="font-semibold">{profile.employee_code}</div>
+            </div>
+          )}
+          {profile?.job_title && (
+            <div>
+              <div className="text-xs font-bold tracking-wider text-[#5a6b85] uppercase mb-1">
+                Job title
+              </div>
+              <div className="font-semibold">{profile.job_title}</div>
+            </div>
+          )}
+          {profile?.territory && (
+            <div>
+              <div className="text-xs font-bold tracking-wider text-[#5a6b85] uppercase mb-1">
+                Territory
+              </div>
+              <div className="font-semibold">{profile.territory}</div>
+            </div>
+          )}
+          {profile?.hire_date && (
+            <div>
+              <div className="text-xs font-bold tracking-wider text-[#5a6b85] uppercase mb-1">
+                Hire date
+              </div>
+              <div className="font-semibold">{profile.hire_date}</div>
+            </div>
+          )}
         </div>
       </div>
 

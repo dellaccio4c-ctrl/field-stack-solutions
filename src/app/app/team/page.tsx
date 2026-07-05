@@ -20,7 +20,9 @@ export default async function TeamPage() {
 
   const { data: members } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, is_active, created_at")
+    .select(
+      "id, full_name, email, role, is_active, created_at, employee_code, job_title, phone, territory, hire_date, notes"
+    )
     .neq("role", "customer")
     .order("created_at");
 

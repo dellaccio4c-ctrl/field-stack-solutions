@@ -84,6 +84,33 @@ export async function changeRole(userId: string, role: UserRole) {
   return { error: null };
 }
 
+export async function updateEmployee(userId: string, formData: FormData) {
+  const rank = await actorRank();
+  if (rank < 4)
+    return { error: "Only Admins and Owners can edit employee records." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      full_name: String(formData.get("full_name") ?? "").trim(),
+      employee_code: String(formData.get("employee_code") ?? "").trim() || null,
+      job_title: String(formData.get("job_title") ?? "").trim() || null,
+      phone: String(formData.get("phone") ?? "").trim() || null,
+      territory: String(formData.get("territory") ?? "").trim() || null,
+      hire_date: String(formData.get("hire_date") || "") || null,
+      notes: String(formData.get("notes") ?? "").trim() || null,
+    })
+    .eq("id", userId);
+  if (error) {
+    if (error.message.includes("profiles_employee_code_unique"))
+      return { error: "That employee code is already in use." };
+    return { error: error.message };
+  }
+  revalidatePath("/app/team");
+  return { error: null };
+}
+
 export async function setActive(userId: string, isActive: boolean) {
   const rank = await actorRank();
   if (rank < 4) return { error: "Only Admins and Owners can deactivate users." };
