@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { atLeast, ROLE_LABEL, type UserRole } from "@/lib/roles";
+import { atLeast, type UserRole } from "@/lib/roles";
 import { SignOutButton } from "./signout-button";
 
 type NavItem = { href: string; label: string; min: UserRole };
@@ -114,8 +114,11 @@ export default async function AppLayout({
     })
     .filter(Boolean) as NavEntry[];
 
+  // Show only the preferred name, or the first name if none is set.
   const displayName =
-    profile.preferred_name || profile.full_name || user.email;
+    profile.preferred_name ||
+    (profile.full_name || "").split(" ")[0] ||
+    user.email;
 
   return (
     <div className="min-h-screen bg-[#f5f7fb]">
@@ -180,11 +183,8 @@ export default async function AppLayout({
           </nav>
 
           <div className="flex items-center gap-4 flex-shrink-0 ml-auto">
-            <div className="text-right hidden sm:block">
-              <div className="text-white text-sm font-semibold leading-tight whitespace-nowrap">
-                {displayName}
-              </div>
-              <div className="text-[#ffa347] text-xs">{ROLE_LABEL[role]}</div>
+            <div className="text-white text-sm font-semibold whitespace-nowrap hidden sm:block">
+              {displayName}
             </div>
             <SignOutButton />
           </div>
