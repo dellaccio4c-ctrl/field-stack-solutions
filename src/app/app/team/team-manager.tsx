@@ -22,7 +22,14 @@ type Member = {
   preferred_name: string | null;
 };
 
-const STAFF_ROLES: UserRole[] = ["readonly", "field", "manager", "admin", "owner"];
+const STAFF_ROLES: UserRole[] = [
+  "readonly",
+  "field",
+  "xpress_pumping",
+  "manager",
+  "admin",
+  "owner",
+];
 
 function EField({
   name,

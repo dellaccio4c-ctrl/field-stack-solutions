@@ -8,6 +8,8 @@ export type PumpSite = {
   last_pumped: string | null;
   notes: string | null;
   is_active: boolean;
+  lat: number | null;
+  lng: number | null;
 };
 
 export type Projection = {

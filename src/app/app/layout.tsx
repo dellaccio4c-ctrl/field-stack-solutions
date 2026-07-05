@@ -24,6 +24,12 @@ export default async function AppLayout({
   if (!profile || !profile.is_active) redirect("/login");
   const role = profile.role as UserRole;
 
+  // Xpress Pumping is a focused role: pump scheduling only.
+  const xpressNav = [
+    { href: "/app/dev/pump", label: "Pump Schedule", min: "customer" as UserRole },
+    { href: "/app/account", label: "Account", min: "customer" as UserRole },
+  ];
+
   const nav = [
     { href: "/app", label: "Dashboard", min: "customer" as UserRole },
     { href: "/app/leads", label: "Leads", min: "field" as UserRole },
@@ -39,7 +45,7 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-screen bg-[#f5f7fb]">
-      <header className="sticky top-0 z-50 bg-[#0e1f38] border-b border-white/10">
+      <header className="sticky top-0 z-50 bg-[#0e1f38] border-b border-white/10 print:hidden">
         <div className="max-w-[1140px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/app" className="flex items-center gap-2.5">
@@ -54,7 +60,7 @@ export default async function AppLayout({
               </span>
             </Link>
             <nav className="hidden md:flex items-center gap-5">
-              {nav
+              {(role === "xpress_pumping" ? xpressNav : nav)
                 .filter((n) => atLeast(role, n.min))
                 .map((n) => (
                   <Link
