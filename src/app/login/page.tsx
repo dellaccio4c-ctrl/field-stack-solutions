@@ -34,17 +34,15 @@ function LoginForm() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0e1f38] px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff8a1e] to-[#ffa347] flex items-center justify-center text-white font-extrabold text-lg">
-            F
-          </div>
-          <div>
-            <div className="font-extrabold text-lg text-[#0e1f38] leading-tight">
-              Field Stack Solutions
-            </div>
-            <div className="text-[11px] tracking-widest font-semibold text-[#b9700f]">
-              PORTAL LOGIN
-            </div>
+        <div className="mb-8">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/fss-wordmark.png"
+            alt="Field Stack Solutions"
+            className="h-16 object-contain -ml-2"
+          />
+          <div className="text-[11px] tracking-widest font-semibold text-[#b9700f] mt-1">
+            PORTAL LOGIN
           </div>
         </div>
 

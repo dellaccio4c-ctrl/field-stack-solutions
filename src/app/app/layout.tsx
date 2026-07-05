@@ -42,11 +42,14 @@ export default async function AppLayout({
         <div className="max-w-[1140px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/app" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#ff8a1e] to-[#ffa347] flex items-center justify-center text-white font-extrabold">
-                F
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/fss-badge-navy.png"
+                alt="FSS"
+                className="w-9 h-9 rounded-full object-cover"
+              />
               <span className="text-white font-extrabold tracking-tight">
-                FieldStack
+                Field Stack
               </span>
             </Link>
             <nav className="hidden md:flex items-center gap-5">
