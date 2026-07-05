@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import * as XLSX from "xlsx";
+import { parseSheet } from "@/lib/sheet";
 import { importEquipment, type ImportEquipmentRow } from "./import-actions";
 
 const HEADER_MAP: Record<string, keyof ImportEquipmentRow> = {
@@ -57,6 +57,7 @@ export function ImportEquipmentModal() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ImportEquipmentRow[]>([]);
+  const [defaultCustomer, setDefaultCustomer] = useState("");
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
@@ -83,29 +84,11 @@ export function ImportEquipmentModal() {
 
     try {
       const data = await file.arrayBuffer();
-      const wb = XLSX.read(data, { cellDates: true });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-        defval: "",
-      });
-
-      const parsed: ImportEquipmentRow[] = raw.map((r) => {
-        const row: Partial<ImportEquipmentRow> = {};
-        for (const [key, value] of Object.entries(r)) {
-          const mapped = HEADER_MAP[key.trim().toLowerCase()];
-          if (!mapped) continue;
-          (row[mapped] as unknown) =
-            value instanceof Date
-              ? value.toISOString().slice(0, 10)
-              : String(value).trim();
-        }
-        return row as ImportEquipmentRow;
-      });
-
-      const valid = parsed.filter((r) => r.customer_name && r.name);
+      const parsed = parseSheet<ImportEquipmentRow>(data, HEADER_MAP);
+      const valid = parsed.filter((r) => r.name) as ImportEquipmentRow[];
       if (!valid.length) {
         setError(
-          "No usable rows found. The file needs at least 'Customer Name' and 'Equipment Name' columns — download the template to see the expected format."
+          "No usable rows found. The file needs at least an 'Equipment Name' column — download the template to see the expected format."
         );
         setRows([]);
         return;
@@ -117,10 +100,21 @@ export function ImportEquipmentModal() {
     }
   }
 
+  const needsCustomer = rows.some((r) => !r.customer_name);
+  const readyCount = rows.filter(
+    (r) => r.customer_name || defaultCustomer.trim()
+  ).length;
+
   async function handleImport() {
     setSaving(true);
     setError(null);
-    const res = await importEquipment(rows);
+    const payload = rows
+      .map((r) => ({
+        ...r,
+        customer_name: r.customer_name?.trim() || defaultCustomer.trim(),
+      }))
+      .filter((r) => r.customer_name && r.name);
+    const res = await importEquipment(payload);
     setSaving(false);
     if (res.error) {
       setError(res.error);
@@ -179,14 +173,33 @@ export function ImportEquipmentModal() {
               className="w-full text-sm text-[#5a6b85] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#fff2e3] file:text-[#b9700f] file:font-semibold file:cursor-pointer mb-4"
             />
 
+            {rows.length > 0 && needsCustomer && (
+              <label className="block text-xs font-semibold text-[#5a6b85] mb-4">
+                Assign these units to customer
+                <input
+                  value={defaultCustomer}
+                  onChange={(e) => setDefaultCustomer(e.target.value)}
+                  placeholder="e.g. Real Capital — Store Space"
+                  className="block mt-1 w-full border border-[#e4e9f1] rounded-lg px-3 py-2 text-sm bg-white font-normal text-[#0e1726] focus:outline-none focus:border-[#ff8a1e]"
+                />
+                <span className="font-normal">
+                  Rows without a customer column will be filed under this
+                  customer (created if it doesn&apos;t exist yet).
+                </span>
+              </label>
+            )}
+
             {rows.length > 0 && (
               <div className="bg-[#f5f7fb] rounded-xl p-4 mb-4 text-sm">
                 <b>{fileName}</b>: {rows.length} unit
-                {rows.length === 1 ? "" : "s"} ready to import.
+                {rows.length === 1 ? "" : "s"} found
+                {needsCustomer && !defaultCustomer.trim()
+                  ? " — enter a customer above to enable import."
+                  : `, ${readyCount} ready to import.`}
                 <div className="mt-2 max-h-40 overflow-y-auto space-y-1">
                   {rows.slice(0, 8).map((r, i) => (
                     <div key={i} className="text-[#5a6b85]">
-                      • {r.customer_name}
+                      • {r.customer_name || defaultCustomer || "(customer?)"}
                       {r.site_label ? ` — ${r.site_label}` : ""} · {r.name}
                       {r.serial_number ? ` · SN ${r.serial_number}` : ""}
                     </div>
@@ -215,18 +228,19 @@ export function ImportEquipmentModal() {
               {rows.length > 0 && (
                 <button
                   onClick={handleImport}
-                  disabled={saving}
+                  disabled={saving || readyCount === 0}
                   className="flex-1 bg-[#ff8a1e] hover:bg-[#ffa347] text-white font-semibold rounded-lg py-2.5 transition disabled:opacity-60"
                 >
                   {saving
                     ? "Importing…"
-                    : `Import ${rows.length} unit${rows.length === 1 ? "" : "s"}`}
+                    : `Import ${readyCount} unit${readyCount === 1 ? "" : "s"}`}
                 </button>
               )}
               <button
                 onClick={() => {
                   setOpen(false);
                   setRows([]);
+                  setDefaultCustomer("");
                   setError(null);
                   setResult(null);
                 }}
