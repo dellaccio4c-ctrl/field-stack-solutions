@@ -71,6 +71,10 @@ export default async function AppLayout({
     },
     {
       kind: "link",
+      item: { href: "/app/ai", label: "Ask AI", min: "readonly" },
+    },
+    {
+      kind: "link",
       item: { href: "/app/account", label: "Account", min: "customer" },
     },
   ];
