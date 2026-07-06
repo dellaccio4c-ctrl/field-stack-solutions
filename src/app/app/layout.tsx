@@ -41,6 +41,7 @@ export default async function AppLayout({
         { href: "/app/work-orders", label: "Work Orders", min: "field" },
         { href: "/app/work-orders/trip", label: "Trip Planner", min: "field" },
         { href: "/app/sites", label: "Sites", min: "field" },
+        { href: "/app/network", label: "Network", min: "field" },
         { href: "/app/equipment", label: "Equipment", min: "field" },
         { href: "/app/inventory", label: "Inventory", min: "field" },
         { href: "/app/dev/pump", label: "Pump Scheduler", min: "manager" },

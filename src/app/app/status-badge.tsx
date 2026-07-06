@@ -29,6 +29,7 @@ const WO_TYPE_LABEL: Record<string, string> = {
   preventative: "Preventative",
   pumping: "Pumping",
   install: "Install",
+  network: "Network",
   inspection: "Inspection",
 };
 

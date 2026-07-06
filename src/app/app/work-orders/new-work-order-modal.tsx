@@ -187,6 +187,7 @@ export function NewWorkOrderModal({
                     <option value="preventative">Preventative Maintenance</option>
                     <option value="pumping">Pumping</option>
                     <option value="install">Install / Project</option>
+                    <option value="network">Network</option>
                     <option value="inspection">Inspection</option>
                   </select>
                 </div>
