@@ -192,6 +192,26 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "create_work_order",
+    description:
+      "Create a new work order (status: open, unassigned — dispatchers assign it in the Work Orders page). Provide a clear title and detailed description from what the user reported. Match customer/site by name (use query_customers or query_sites first if unsure). Priority: low/normal/high/emergency — use emergency only for safety or full-site-down situations. Types: service/preventative/pumping/install/inspection/network.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "short, specific, e.g. 'Vacuum motor #3 not starting — Bay 2'" },
+        description: { type: "string" },
+        priority: { type: "string", enum: ["low", "normal", "high", "emergency"] },
+        wo_type: {
+          type: "string",
+          enum: ["service", "preventative", "pumping", "install", "inspection", "network"],
+        },
+        customer_name: { type: "string" },
+        site_label: { type: "string" },
+      },
+      required: ["title", "description"],
+    },
+  },
+  {
     name: "query_customers",
     description:
       "List customers with site counts and (role permitting) invoice counts and statuses.",
@@ -616,6 +636,76 @@ async function runTool(
         link: `/app/estimates/${estimate.id}`,
       });
     }
+    if (name === "create_work_order") {
+      const title = String(input.title ?? "").trim();
+      const description = String(input.description ?? "").trim();
+      if (!title || !description) return "error: title and description are required";
+      const priority = ["low", "normal", "high", "emergency"].includes(String(input.priority))
+        ? String(input.priority)
+        : "normal";
+      const woType = [
+        "service", "preventative", "pumping", "install", "inspection", "network",
+      ].includes(String(input.wo_type))
+        ? String(input.wo_type)
+        : "service";
+
+      type SiteRow = {
+        id: string; label: string; address: string | null; city: string | null;
+        state: string | null; zip: string | null; lat: number | null; lng: number | null;
+      };
+      let customerId: string | null = null;
+      let site: SiteRow | null = null;
+
+      if (input.customer_name) {
+        const { data: customers } = await supabase
+          .from("customers")
+          .select("id, name, locations(id, label, address, city, state, zip, lat, lng)");
+        const customer = (customers ?? []).find(
+          (c) => c.name.trim().toLowerCase() === String(input.customer_name).trim().toLowerCase()
+        );
+        if (!customer)
+          return `error: no customer named "${input.customer_name}". Existing: ${(customers ?? [])
+            .map((c) => c.name).slice(0, 40).join(", ")}`;
+        customerId = customer.id;
+        if (input.site_label) {
+          const sites = (customer.locations as unknown as SiteRow[]) ?? [];
+          site =
+            sites.find(
+              (l) => l.label.trim().toLowerCase() === String(input.site_label).trim().toLowerCase()
+            ) ?? null;
+          if (!site)
+            return `error: customer "${customer.name}" has no site named "${input.site_label}". Their sites: ${sites
+              .map((l) => l.label).slice(0, 40).join(", ") || "(none)"}`;
+        }
+      }
+
+      const { data: wo, error: woErr } = await supabase
+        .from("work_orders")
+        .insert({
+          title,
+          description,
+          priority,
+          wo_type: woType,
+          customer_id: customerId,
+          location_id: site?.id ?? null,
+          address: site?.address ?? null,
+          city: site?.city ?? null,
+          state: site?.state ?? null,
+          zip: site?.zip ?? null,
+          lat: site?.lat ?? null,
+          lng: site?.lng ?? null,
+          created_by: userId,
+        })
+        .select("id, number")
+        .single();
+      if (woErr) return `error: ${woErr.message}`;
+      return JSON.stringify({
+        created: true,
+        work_order: `WO-${wo.number}`,
+        status: "open, unassigned",
+        link: `/app/work-orders/${wo.id}`,
+      });
+    }
     if (name === "query_customers") {
       let q = supabase
         .from("customers")
@@ -677,6 +767,7 @@ The user is ${me.preferred_name || me.full_name || "a staff member"} (role: ${me
 Use the query tools to answer from live data — never invent numbers. Data access is enforced by the database per the user's role: if a financial query returns empty for a non-owner, tell them that view is owner-only rather than guessing.
 Be concise and operational: lead with the answer, use short bullet lists for multiple items, include specific numbers, names, and dates. Money in USD. If data is insufficient, say what's missing. Do not fabricate records.
 You can also draft estimates with create_estimate_draft. Rules: check query_catalog first and use catalog prices for matching services; if the user gave no price for an item and the catalog has no match, ask them rather than inventing one. Confirm the line items with the user before creating unless they were fully specified. Drafts are never sent automatically — after creating, give the estimate number and tell them to review it under Estimates.
+You can create work orders with create_work_order from what the user describes (e.g. a pasted maintenance complaint or an issue found in a report). Write a specific title and a thorough description capturing everything they said; suggest the priority and confirm before using high or emergency unless the user set it. New work orders are open and unassigned — tell the user the WO number and that dispatch/assignment happens on the Work Orders page.
 Export: when the user wants data as a file/CSV/spreadsheet, use export_data — they get a download button in chat.
 Import: when the user pastes or uploads tabular data (uploaded files appear in their message as structured rows), map the columns to import_sites or import_equipment fields, show them your mapping for confirmation if any column is ambiguous, then import and report imported/skipped counts. Never guess required values that are missing.`;
 
