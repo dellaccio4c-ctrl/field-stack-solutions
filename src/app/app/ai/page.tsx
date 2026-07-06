@@ -21,13 +21,14 @@ export default async function AiPage() {
       </h1>
       <p className="text-[#5a6b85] mb-6">
         Ask about your operations in plain English — work orders, sites,
-        equipment, reports, closures{me.role === "owner" ? ", financials" : ""}.
+        equipment, reports, closures{me.role === "owner" ? ", financials" : ""} —
+        or have it draft an estimate (always saved as a draft for your review).
         Answers come from live data and respect your access level.
       </p>
       <AiChat
         suggestions={[
           "Which sites have open work orders right now?",
-          "Any site closures in the last 30 days, and why?",
+          "Draft an estimate for a customer — I'll describe the job",
           "Which equipment has the most work orders?",
           ...(me.role === "owner"
             ? ["How is revenue trending this month vs expenses?"]

@@ -63,6 +63,45 @@ const TOOLS: Anthropic.Tool[] = [
     input_schema: { type: "object", properties: {} },
   },
   {
+    name: "query_catalog",
+    description:
+      "The company's saved services/products catalog with standard prices. Use this to price estimate line items whenever possible instead of inventing prices. Optional text search.",
+    input_schema: {
+      type: "object",
+      properties: { search: { type: "string" } },
+    },
+  },
+  {
+    name: "create_estimate_draft",
+    description:
+      "Create a DRAFT estimate for a customer. It is never sent automatically — a human reviews it in the estimate editor. Match line item prices to the catalog when a matching service exists. customer_name must match an existing customer (use query_customers first if unsure). Returns the estimate number and link.",
+    input_schema: {
+      type: "object",
+      properties: {
+        customer_name: { type: "string" },
+        site_label: {
+          type: "string",
+          description: "optional site name under that customer",
+        },
+        title: { type: "string", description: "short job title" },
+        notes: { type: "string" },
+        line_items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              description: { type: "string" },
+              quantity: { type: "number" },
+              unit_price: { type: "number" },
+            },
+            required: ["description", "quantity", "unit_price"],
+          },
+        },
+      },
+      required: ["customer_name", "title", "line_items"],
+    },
+  },
+  {
     name: "query_customers",
     description:
       "List customers with site counts and (role permitting) invoice counts and statuses.",
@@ -78,7 +117,8 @@ type Json = Record<string, unknown>;
 async function runTool(
   supabase: SupabaseClient,
   name: string,
-  input: Json
+  input: Json,
+  userId: string
 ): Promise<string> {
   const lim = Math.min(Number(input.limit) || 30, 100);
   try {
@@ -197,6 +237,98 @@ async function runTool(
         note: "empty arrays may mean the asking user's role cannot access financials",
       });
     }
+    if (name === "query_catalog") {
+      let q = supabase
+        .from("catalog_items")
+        .select("name, description, unit_price")
+        .eq("is_active", true)
+        .limit(100);
+      if (input.search) q = q.ilike("name", `%${input.search}%`);
+      const { data, error } = await q;
+      return error ? `error: ${error.message}` : JSON.stringify(data);
+    }
+    if (name === "create_estimate_draft") {
+      const items = (input.line_items ?? []) as {
+        description: string;
+        quantity: number;
+        unit_price: number;
+      }[];
+      if (!items.length) return "error: at least one line item is required";
+      if (items.length > 30) return "error: too many line items (max 30)";
+      for (const it of items) {
+        if (!it.description?.trim()) return "error: every line item needs a description";
+        if (!(Number(it.quantity) > 0)) return "error: quantities must be positive";
+        if (!(Number(it.unit_price) >= 0)) return "error: prices must be zero or positive";
+      }
+
+      const custName = String(input.customer_name ?? "").trim();
+      const { data: customers } = await supabase
+        .from("customers")
+        .select("id, name, locations(id, label)");
+      const customer = (customers ?? []).find(
+        (c) => c.name.trim().toLowerCase() === custName.toLowerCase()
+      );
+      if (!customer)
+        return `error: no customer named "${custName}". Existing customers: ${(customers ?? [])
+          .map((c) => c.name)
+          .slice(0, 40)
+          .join(", ")}`;
+
+      let locationId: string | null = null;
+      if (input.site_label) {
+        const site = (
+          (customer.locations as unknown as { id: string; label: string }[]) ?? []
+        ).find(
+          (l) =>
+            l.label.trim().toLowerCase() ===
+            String(input.site_label).trim().toLowerCase()
+        );
+        if (!site)
+          return `error: customer "${customer.name}" has no site named "${input.site_label}". Their sites: ${(
+            (customer.locations as unknown as { label: string }[]) ?? []
+          )
+            .map((l) => l.label)
+            .slice(0, 40)
+            .join(", ") || "(none)"}`;
+        locationId = site.id;
+      }
+
+      const { data: estimate, error: estErr } = await supabase
+        .from("estimates")
+        .insert({
+          customer_id: customer.id,
+          location_id: locationId,
+          title: String(input.title ?? "").trim() || "Estimate",
+          notes: String(input.notes ?? "").trim() || null,
+          created_by: userId,
+        })
+        .select("id, number")
+        .single();
+      if (estErr) return `error: ${estErr.message}`;
+
+      const { error: lineErr } = await supabase.from("line_items").insert(
+        items.map((it, i) => ({
+          estimate_id: estimate.id,
+          description: it.description.trim(),
+          quantity: Number(it.quantity),
+          unit_price: Number(it.unit_price),
+          sort_order: i,
+        }))
+      );
+      if (lineErr) return `error: line items failed: ${lineErr.message}`;
+
+      const total = items.reduce(
+        (s, it) => s + Number(it.quantity) * Number(it.unit_price),
+        0
+      );
+      return JSON.stringify({
+        created: true,
+        estimate_number: `EST-${estimate.number}`,
+        subtotal: total,
+        status: "draft — review before sending",
+        link: `/app/estimates/${estimate.id}`,
+      });
+    }
     if (name === "query_customers") {
       let q = supabase
         .from("customers")
@@ -256,7 +388,8 @@ export async function POST(req: Request) {
   const system = `You are Ask FieldStack, the operations assistant inside Field Stack Solutions' field-service platform. Today is ${new Date().toDateString()}.
 The user is ${me.preferred_name || me.full_name || "a staff member"} (role: ${me.role}).
 Use the query tools to answer from live data — never invent numbers. Data access is enforced by the database per the user's role: if a financial query returns empty for a non-owner, tell them that view is owner-only rather than guessing.
-Be concise and operational: lead with the answer, use short bullet lists for multiple items, include specific numbers, names, and dates. Money in USD. If data is insufficient, say what's missing. Do not fabricate records.`;
+Be concise and operational: lead with the answer, use short bullet lists for multiple items, include specific numbers, names, and dates. Money in USD. If data is insufficient, say what's missing. Do not fabricate records.
+You can also draft estimates with create_estimate_draft. Rules: check query_catalog first and use catalog prices for matching services; if the user gave no price for an item and the catalog has no match, ask them rather than inventing one. Confirm the line items with the user before creating unless they were fully specified. Drafts are never sent automatically — after creating, give the estimate number and tell them to review it under Estimates.`;
 
   try {
     for (let turn = 0; turn < 6; turn++) {
@@ -275,7 +408,8 @@ Be concise and operational: lead with the answer, use short bullet lists for mul
             const result = await runTool(
               supabase as unknown as SupabaseClient,
               block.name,
-              block.input as Json
+              block.input as Json,
+              user.id
             );
             toolResults.push({
               type: "tool_result",
