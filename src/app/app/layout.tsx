@@ -57,6 +57,7 @@ export default async function AppLayout({
         { href: "/app/estimates", label: "Estimates", min: "readonly" },
         { href: "/app/invoices", label: "Invoices", min: "readonly" },
         { href: "/app/catalog", label: "Catalog", min: "manager" },
+        { href: "/app/vendor-parts", label: "Vendor Parts & Pricing", min: "field" },
       ],
     },
     {

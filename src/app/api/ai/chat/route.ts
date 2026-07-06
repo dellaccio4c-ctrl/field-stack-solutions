@@ -162,6 +162,20 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "query_vendor_parts",
+    description:
+      "Search the Vendor Parts & Pricing catalog (Grainger etc.) by part number, name, brand, or keywords. Returns vendor, SKU, name, brand, internal cost, and sell_price (cost + company markup). When drafting estimates, use sell_price for parts line items and reference the part number in the description.",
+    input_schema: {
+      type: "object",
+      properties: {
+        search: { type: "string" },
+        vendor: { type: "string" },
+        limit: { type: "number", description: "default 20" },
+      },
+      required: ["search"],
+    },
+  },
+  {
     name: "create_estimate_draft",
     description:
       "Create a DRAFT estimate for a customer. It is never sent automatically — a human reviews it in the estimate editor. Match line item prices to the catalog when a matching service exists. customer_name must match an existing customer (use query_customers first if unsure). Returns the estimate number and link.",
@@ -554,6 +568,38 @@ async function runTool(
       const { data, error } = await q;
       return error ? `error: ${error.message}` : JSON.stringify(data);
     }
+    if (name === "query_vendor_parts") {
+      const search = String(input.search ?? "").trim();
+      if (!search) return "error: search term required";
+      const partLim = Math.min(Number(input.limit) || 20, 50);
+      let q = supabase
+        .from("vendor_parts")
+        .select("vendor, sku, name, description, category, brand, unit, cost")
+        .eq("is_active", true)
+        .or(
+          `sku.ilike.%${search}%,name.ilike.%${search}%,brand.ilike.%${search}%,description.ilike.%${search}%`
+        )
+        .limit(partLim);
+      if (input.vendor) q = q.eq("vendor", String(input.vendor));
+      const [{ data, error }, { data: settings }] = await Promise.all([
+        q,
+        supabase.from("company_settings").select("parts_markup_percent").single(),
+      ]);
+      if (error) return `error: ${error.message}`;
+      const markup = Number(settings?.parts_markup_percent ?? 35);
+      return JSON.stringify({
+        markup_percent: markup,
+        parts: (data ?? []).map((p) => ({
+          ...p,
+          cost: p.cost == null ? null : Number(p.cost),
+          sell_price:
+            p.cost == null
+              ? null
+              : Math.round(Number(p.cost) * (1 + markup / 100) * 100) / 100,
+        })),
+        note: "null cost means we have no price on file for this part yet — ask the user for the price or flag it",
+      });
+    }
     if (name === "create_estimate_draft") {
       const items = (input.line_items ?? []) as {
         description: string;
@@ -766,7 +812,7 @@ export async function POST(req: Request) {
 The user is ${me.preferred_name || me.full_name || "a staff member"} (role: ${me.role}).
 Use the query tools to answer from live data — never invent numbers. Data access is enforced by the database per the user's role: if a financial query returns empty for a non-owner, tell them that view is owner-only rather than guessing.
 Be concise and operational: lead with the answer, use short bullet lists for multiple items, include specific numbers, names, and dates. Money in USD. If data is insufficient, say what's missing. Do not fabricate records.
-You can also draft estimates with create_estimate_draft. Rules: check query_catalog first and use catalog prices for matching services; if the user gave no price for an item and the catalog has no match, ask them rather than inventing one. Confirm the line items with the user before creating unless they were fully specified. Drafts are never sent automatically — after creating, give the estimate number and tell them to review it under Estimates.
+You can also draft estimates with create_estimate_draft. Rules: check query_catalog for services and query_vendor_parts for parts/materials (use sell_price, include the part number in the line description, e.g. "Leeson 1HP washdown motor — Grainger 48ZH49"); if the user gave no price for an item and the catalog has no match, ask them rather than inventing one. Confirm the line items with the user before creating unless they were fully specified. Drafts are never sent automatically — after creating, give the estimate number and tell them to review it under Estimates.
 You can create work orders with create_work_order from what the user describes (e.g. a pasted maintenance complaint or an issue found in a report). Write a specific title and a thorough description capturing everything they said; suggest the priority and confirm before using high or emergency unless the user set it. New work orders are open and unassigned — tell the user the WO number and that dispatch/assignment happens on the Work Orders page.
 Export: when the user wants data as a file/CSV/spreadsheet, use export_data — they get a download button in chat.
 Import: when the user pastes or uploads tabular data (uploaded files appear in their message as structured rows), map the columns to import_sites or import_equipment fields, show them your mapping for confirmation if any column is ambiguous, then import and report imported/skipped counts. Never guess required values that are missing.`;
