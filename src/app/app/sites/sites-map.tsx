@@ -55,7 +55,10 @@ export default function SitesMap({ sites }: { sites: SiteRow[] }) {
             icon={pinIcon(s.openWOs > 0 ? "#d24b4b" : "#1f9d63")}
           >
             <Popup>
-              <b>{s.label}</b> — {s.customerName}
+              <Link href={`/app/sites/${s.id}`}>
+                <b>{s.label}</b>
+              </Link>{" "}
+              — {s.customerName}
               <br />
               {s.address}
               <br />

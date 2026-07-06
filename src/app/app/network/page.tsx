@@ -3,11 +3,21 @@ import { createClient } from "@/lib/supabase/server";
 import { money } from "@/lib/money";
 import { StatusBadge, PriorityBadge } from "../status-badge";
 import { NetworkManager } from "./network-manager";
+import { BillingButton } from "./billing-button";
 
 const OPEN_WO = ["open", "scheduled", "in_progress", "on_hold"];
 
 export default async function NetworkPage() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user!.id)
+    .single();
+  const isAdmin = !!me && ["admin", "owner"].includes(me.role);
 
   const [
     { data: circuits },
@@ -58,9 +68,12 @@ export default async function NetworkPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold tracking-tight text-[#0e1726] mb-2">
-        Network
-      </h1>
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
+        <h1 className="text-3xl font-extrabold tracking-tight text-[#0e1726]">
+          Network
+        </h1>
+        {isAdmin && <BillingButton />}
+      </div>
       <p className="text-[#5a6b85] mb-6">
         Internet circuits, network installs, and every device on the wire —
         across all sites.

@@ -235,7 +235,14 @@ export default async function SitesPage({
                   key={s.id}
                   className="border-b border-[#e4e9f1] last:border-0 hover:bg-[#f5f7fb]"
                 >
-                  <td className="px-5 py-3.5 font-semibold">{s.label}</td>
+                  <td className="px-5 py-3.5 font-semibold">
+                    <Link
+                      href={`/app/sites/${s.id}`}
+                      className="hover:text-[#b9700f]"
+                    >
+                      {s.label}
+                    </Link>
+                  </td>
                   <td className="px-5 py-3.5">
                     <Link
                       href={`/app/customers/${s.customerId}`}
