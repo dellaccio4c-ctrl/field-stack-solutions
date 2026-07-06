@@ -123,3 +123,31 @@ export async function sendDocumentEmail(opts: {
 
   return { error: error ? error.message : null };
 }
+
+// Generic in-app event alert, gated by each recipient's notify_prefs.
+export async function sendAlertEmail(opts: {
+  to: string[];
+  subject: string;
+  bodyHtml: string;
+  link?: string;
+}) {
+  if (!emailConfigured() || !opts.to.length) return { error: "skipped" };
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: process.env.EMAIL_FROM!,
+    to: opts.to,
+    subject: opts.subject,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto">
+        <div style="background:#0e1f38;padding:20px 24px;border-radius:12px 12px 0 0">
+          <span style="color:#fff;font-size:18px;font-weight:800">${COMPANY.name}</span>
+        </div>
+        <div style="border:1px solid #e4e9f1;border-top:0;padding:24px;border-radius:0 0 12px 12px">
+          ${opts.bodyHtml}
+          ${opts.link ? `<p style="margin:20px 0"><a href="${opts.link}" style="background:#ff8a1e;color:#fff;font-weight:700;padding:10px 20px;border-radius:10px;text-decoration:none">Open in FieldStack →</a></p>` : ""}
+          <p style="font-size:12px;color:#5a6b85;margin-top:20px">You're receiving this because of your notification settings in FieldStack — adjust them under Account → Notifications.</p>
+        </div>
+      </div>`,
+  });
+  return { error: error ? error.message : null };
+}

@@ -20,7 +20,7 @@ export async function submitEntry(formId: string, formData: FormData) {
 
   const { data: form } = await supabase
     .from("ops_forms")
-    .select("fields")
+    .select("name, fields")
     .eq("id", formId)
     .single();
   if (!form) return { error: "Form not found." };
@@ -49,6 +49,52 @@ export async function submitEntry(formId: string, formData: FormData) {
     data,
   });
   if (error) return { error: error.message };
+
+  // Alert opted-in staff on the event-driven reports that demand eyes now.
+  const alertKey = /closure/i.test(form.name)
+    ? "site_closures"
+    : /incident/i.test(form.name)
+      ? "incident_claims"
+      : null;
+  if (alertKey) {
+    try {
+      const { emailConfigured, sendAlertEmail } = await import("@/lib/email");
+      if (emailConfigured()) {
+        const [{ data: staff }, { data: site }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("email, notify_prefs")
+            .neq("role", "customer")
+            .eq("is_active", true),
+          formData.get("location_id")
+            ? supabase
+                .from("locations")
+                .select("label")
+                .eq("id", String(formData.get("location_id")))
+                .single()
+            : Promise.resolve({ data: null }),
+        ]);
+        const to = (staff ?? [])
+          .filter(
+            (p) =>
+              (p.notify_prefs as Record<string, boolean>)?.[alertKey] && p.email
+          )
+          .map((p) => p.email as string);
+        if (to.length) {
+          const siteLabel = (site as { label: string } | null)?.label;
+          await sendAlertEmail({
+            to,
+            subject: `${form.name}${siteLabel ? ` — ${siteLabel}` : ""}`,
+            bodyHtml: `<p><b>${form.name}</b> was just submitted${siteLabel ? ` for <b>${siteLabel}</b>` : ""}.</p>`,
+            link: `https://www.fieldstacksolutions.com/app/reports/${formId}`,
+          });
+        }
+      }
+    } catch {
+      // Alerting is best-effort; the entry itself is already saved.
+    }
+  }
+
   revalidatePath(`/app/reports/${formId}`);
   revalidatePath("/app/reports");
   return { error: null };

@@ -101,6 +101,42 @@ export async function assignWorkOrder(id: string, userId: string | null) {
     .update({ assigned_to: userId })
     .eq("id", id);
   if (error) return { error: error.message };
+
+  // Email the assignee if they've opted in (best-effort).
+  if (userId) {
+    try {
+      const { emailConfigured, sendAlertEmail } = await import("@/lib/email");
+      if (emailConfigured()) {
+        const [{ data: assignee }, { data: wo }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("email, notify_prefs")
+            .eq("id", userId)
+            .single(),
+          supabase
+            .from("work_orders")
+            .select("number, title, priority")
+            .eq("id", id)
+            .single(),
+        ]);
+        if (
+          assignee?.email &&
+          (assignee.notify_prefs as Record<string, boolean>)?.wo_assigned &&
+          wo
+        ) {
+          await sendAlertEmail({
+            to: [assignee.email],
+            subject: `Work order assigned to you: WO-${wo.number} — ${wo.title}`,
+            bodyHtml: `<p><b>WO-${wo.number} · ${wo.title}</b> was just assigned to you${wo.priority !== "normal" ? ` (priority: <b>${wo.priority}</b>)` : ""}.</p>`,
+            link: `https://www.fieldstacksolutions.com/app/work-orders/${id}`,
+          });
+        }
+      }
+    } catch {
+      // assignment already saved; alerting is best-effort
+    }
+  }
+
   revalidatePath(`/app/work-orders/${id}`);
   revalidatePath("/app/work-orders");
   return { error: null };

@@ -1,0 +1,24 @@
+{
+  "name": "FieldStack — Field Stack Solutions",
+  "short_name": "FieldStack",
+  "description": "Field service management: work orders, sites, equipment, reporting.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#0e1f38",
+  "icons": [
+    {
+      "src": "/brand/fss-badge-navy.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/fss-badge-navy.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

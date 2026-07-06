@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ROLE_LABEL, type UserRole } from "@/lib/roles";
 import { PasswordForm } from "./password-form";
 import { ProfileForm } from "./profile-form";
+import { NotificationSettings } from "./notification-settings";
 
 export default async function AccountPage() {
   const supabase = await createClient();
@@ -11,7 +12,7 @@ export default async function AccountPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name, email, role, employee_code, job_title, phone, territory, hire_date, preferred_name, personal_email, legal_first_name, legal_last_name, notes"
+      "full_name, email, role, employee_code, job_title, phone, territory, hire_date, preferred_name, personal_email, legal_first_name, legal_last_name, notes, notify_prefs"
     )
     .eq("id", user!.id)
     .single();
@@ -93,6 +94,10 @@ export default async function AccountPage() {
           hire_date: profile?.hire_date ?? "",
           notes: profile?.notes ?? "",
         }}
+      />
+
+      <NotificationSettings
+        prefs={(profile?.notify_prefs as Record<string, boolean>) ?? {}}
       />
 
       <PasswordForm />
