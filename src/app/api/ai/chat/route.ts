@@ -63,6 +63,96 @@ const TOOLS: Anthropic.Tool[] = [
     input_schema: { type: "object", properties: {} },
   },
   {
+    name: "export_data",
+    description:
+      "Prepare a CSV download for the user from any query result. First decide what data they want (reuse the same filters as the query tools), then call this with the dataset and filters. The user gets a Download button in chat. Datasets: work_orders, sites, equipment, report_entries, customers, financial_payments, financial_expenses.",
+    input_schema: {
+      type: "object",
+      properties: {
+        dataset: {
+          type: "string",
+          enum: [
+            "work_orders",
+            "sites",
+            "equipment",
+            "report_entries",
+            "customers",
+            "financial_payments",
+            "financial_expenses",
+          ],
+        },
+        filename: { type: "string", description: "e.g. open-work-orders.csv" },
+        status: { type: "string" },
+        wo_type: { type: "string" },
+        search: { type: "string" },
+        form_name: { type: "string" },
+        since_days: { type: "number" },
+        limit: { type: "number", description: "default 500, max 2000" },
+      },
+      required: ["dataset"],
+    },
+  },
+  {
+    name: "import_sites",
+    description:
+      "Bulk import sites/locations the user pasted or uploaded in chat. Map their columns to: customer_name (required), label, address (required), city, state, zip, notes. Customers are auto-created when missing; duplicate addresses under the same customer are skipped. Confirm the mapping with the user before importing unless it is obvious.",
+    input_schema: {
+      type: "object",
+      properties: {
+        rows: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              customer_name: { type: "string" },
+              label: { type: "string" },
+              address: { type: "string" },
+              city: { type: "string" },
+              state: { type: "string" },
+              zip: { type: "string" },
+              notes: { type: "string" },
+            },
+            required: ["customer_name", "address"],
+          },
+        },
+      },
+      required: ["rows"],
+    },
+  },
+  {
+    name: "import_equipment",
+    description:
+      "Bulk import equipment the user pasted or uploaded in chat. Map their columns to: customer_name (required), site_label, name (required), category, brand, model, serial_number, unit_number, install_date (YYYY-MM-DD), warranty_expires, pm_interval_months, pm_window_days, notes. Duplicates skipped by serial number. Confirm the mapping with the user before importing unless it is obvious.",
+    input_schema: {
+      type: "object",
+      properties: {
+        rows: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              customer_name: { type: "string" },
+              site_label: { type: "string" },
+              name: { type: "string" },
+              category: { type: "string" },
+              brand: { type: "string" },
+              model: { type: "string" },
+              serial_number: { type: "string" },
+              unit_number: { type: "string" },
+              install_date: { type: "string" },
+              warranty_expires: { type: "string" },
+              pm_interval_months: { type: "string" },
+              pm_window_days: { type: "string" },
+              notes: { type: "string" },
+            },
+            required: ["customer_name", "name"],
+          },
+        },
+      },
+      required: ["rows"],
+    },
+  },
+  {
     name: "query_catalog",
     description:
       "The company's saved services/products catalog with standard prices. Use this to price estimate line items whenever possible instead of inventing prices. Optional text search.",
@@ -113,6 +203,164 @@ const TOOLS: Anthropic.Tool[] = [
 ];
 
 type Json = Record<string, unknown>;
+
+function toCsv(rows: Record<string, unknown>[]) {
+  if (!rows.length) return "";
+  const headers = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+  const cell = (v: unknown) => {
+    if (v === true) return "Yes";
+    if (v === false) return "No";
+    if (v == null) return "";
+    const s = typeof v === "object" ? JSON.stringify(v) : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return [
+    headers.join(","),
+    ...rows.map((r) => headers.map((h) => cell(r[h])).join(",")),
+  ].join("\r\n");
+}
+
+async function fetchDataset(
+  supabase: SupabaseClient,
+  input: Json
+): Promise<Record<string, unknown>[] | string> {
+  const lim = Math.min(Number(input.limit) || 500, 2000);
+  const dataset = String(input.dataset);
+  if (dataset === "work_orders") {
+    let q = supabase
+      .from("work_orders")
+      .select(
+        "number, title, status, priority, wo_type, created_at, completed_at, minutes_on_site, customers(name), locations(label)"
+      )
+      .order("created_at", { ascending: false })
+      .limit(lim);
+    if (input.status) q = q.eq("status", String(input.status));
+    if (input.wo_type) q = q.eq("wo_type", String(input.wo_type));
+    if (input.search) q = q.ilike("title", `%${input.search}%`);
+    const { data, error } = await q;
+    if (error) return error.message;
+    return (data ?? []).map((w) => ({
+      number: `WO-${w.number}`,
+      title: w.title,
+      status: w.status,
+      priority: w.priority,
+      type: w.wo_type,
+      customer: (w.customers as unknown as { name: string } | null)?.name ?? "",
+      site: (w.locations as unknown as { label: string } | null)?.label ?? "",
+      created: w.created_at,
+      completed: w.completed_at,
+      minutes_on_site: w.minutes_on_site,
+    }));
+  }
+  if (dataset === "sites") {
+    const { data, error } = await supabase
+      .from("locations")
+      .select("label, address, city, state, zip, notes, customers(name)")
+      .limit(lim);
+    if (error) return error.message;
+    return (data ?? []).map((s) => ({
+      site: s.label,
+      customer: (s.customers as unknown as { name: string } | null)?.name ?? "",
+      address: s.address,
+      city: s.city,
+      state: s.state,
+      zip: s.zip,
+      notes: s.notes,
+    }));
+  }
+  if (dataset === "equipment") {
+    let q = supabase
+      .from("equipment")
+      .select(
+        "name, category, brand, model, serial_number, unit_number, install_date, warranty_expires, pm_interval_months, status, customers(name), locations(label)"
+      )
+      .limit(lim);
+    if (input.search)
+      q = q.or(
+        `name.ilike.%${input.search}%,brand.ilike.%${input.search}%,serial_number.ilike.%${input.search}%`
+      );
+    const { data, error } = await q;
+    if (error) return error.message;
+    return (data ?? []).map((e) => ({
+      name: e.name,
+      category: e.category,
+      brand: e.brand,
+      model: e.model,
+      serial_number: e.serial_number,
+      unit_number: e.unit_number,
+      customer: (e.customers as unknown as { name: string } | null)?.name ?? "",
+      site: (e.locations as unknown as { label: string } | null)?.label ?? "",
+      install_date: e.install_date,
+      warranty_expires: e.warranty_expires,
+      pm_interval_months: e.pm_interval_months,
+      status: e.status,
+    }));
+  }
+  if (dataset === "report_entries") {
+    const sinceDays = Number(input.since_days) || 90;
+    const since = new Date(Date.now() - sinceDays * 86400000)
+      .toISOString()
+      .slice(0, 10);
+    const { data, error } = await supabase
+      .from("ops_entries")
+      .select("entry_date, data, ops_forms(name), locations(label)")
+      .gte("entry_date", since)
+      .order("entry_date", { ascending: false })
+      .limit(lim);
+    if (error) return error.message;
+    let rows = (data ?? []).map((e) => ({
+      date: e.entry_date,
+      form: (e.ops_forms as unknown as { name: string } | null)?.name ?? "",
+      site: (e.locations as unknown as { label: string } | null)?.label ?? "",
+      ...(e.data as Record<string, unknown>),
+    }));
+    if (input.form_name)
+      rows = rows.filter((r) =>
+        String(r.form)
+          .toLowerCase()
+          .includes(String(input.form_name).toLowerCase())
+      );
+    return rows;
+  }
+  if (dataset === "customers") {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("name, contact_name, email, phone, billing_address, notes")
+      .limit(lim);
+    if (error) return error.message;
+    return data ?? [];
+  }
+  if (dataset === "financial_payments") {
+    const { data, error } = await supabase
+      .from("payments")
+      .select("amount, method, received_at, invoices(number, customers(name))")
+      .order("received_at", { ascending: false })
+      .limit(lim);
+    if (error) return error.message;
+    return (data ?? []).map((p) => ({
+      received: p.received_at,
+      amount: p.amount,
+      method: p.method,
+      invoice: `INV-${(p.invoices as unknown as { number: number } | null)?.number ?? ""}`,
+      customer:
+        (
+          p.invoices as unknown as {
+            customers: { name: string } | null;
+          } | null
+        )?.customers?.name ?? "",
+    }));
+  }
+  if (dataset === "financial_expenses") {
+    const { data, error } = await supabase
+      .from("expenses")
+      .select("incurred_at, amount, description, is_pumping")
+      .order("incurred_at", { ascending: false })
+      .limit(lim);
+    if (error) return error.message;
+    return data ?? [];
+  }
+  return `unknown dataset: ${dataset}`;
+}
 
 async function runTool(
   supabase: SupabaseClient,
@@ -236,6 +484,45 @@ async function runTool(
         ),
         note: "empty arrays may mean the asking user's role cannot access financials",
       });
+    }
+    if (name === "export_data") {
+      const rows = await fetchDataset(supabase, input);
+      if (typeof rows === "string") return `error: ${rows}`;
+      if (!rows.length) return "error: no rows matched — nothing to export";
+      const filename =
+        String(input.filename ?? "").trim().replace(/[^a-zA-Z0-9._-]/g, "-") ||
+        `${input.dataset}-export.csv`;
+      return JSON.stringify({
+        __export: {
+          filename: filename.endsWith(".csv") ? filename : `${filename}.csv`,
+          csv: "﻿" + toCsv(rows),
+        },
+        row_count: rows.length,
+      });
+    }
+    if (name === "import_sites") {
+      const { importSites } = await import("@/app/app/sites/actions");
+      const rows = (input.rows ?? []) as {
+        customer_name: string;
+        address: string;
+        label?: string;
+        city?: string;
+        state?: string;
+        zip?: string;
+        notes?: string;
+      }[];
+      if (!rows.length) return "error: no rows provided";
+      const res = await importSites(rows);
+      return JSON.stringify(res);
+    }
+    if (name === "import_equipment") {
+      const { importEquipment } = await import(
+        "@/app/app/equipment/import-actions"
+      );
+      const rows = (input.rows ?? []) as import("@/app/app/equipment/import-actions").ImportEquipmentRow[];
+      if (!rows.length) return "error: no rows provided";
+      const res = await importEquipment(rows);
+      return JSON.stringify(res);
     }
     if (name === "query_catalog") {
       let q = supabase
@@ -389,7 +676,11 @@ export async function POST(req: Request) {
 The user is ${me.preferred_name || me.full_name || "a staff member"} (role: ${me.role}).
 Use the query tools to answer from live data — never invent numbers. Data access is enforced by the database per the user's role: if a financial query returns empty for a non-owner, tell them that view is owner-only rather than guessing.
 Be concise and operational: lead with the answer, use short bullet lists for multiple items, include specific numbers, names, and dates. Money in USD. If data is insufficient, say what's missing. Do not fabricate records.
-You can also draft estimates with create_estimate_draft. Rules: check query_catalog first and use catalog prices for matching services; if the user gave no price for an item and the catalog has no match, ask them rather than inventing one. Confirm the line items with the user before creating unless they were fully specified. Drafts are never sent automatically — after creating, give the estimate number and tell them to review it under Estimates.`;
+You can also draft estimates with create_estimate_draft. Rules: check query_catalog first and use catalog prices for matching services; if the user gave no price for an item and the catalog has no match, ask them rather than inventing one. Confirm the line items with the user before creating unless they were fully specified. Drafts are never sent automatically — after creating, give the estimate number and tell them to review it under Estimates.
+Export: when the user wants data as a file/CSV/spreadsheet, use export_data — they get a download button in chat.
+Import: when the user pastes or uploads tabular data (uploaded files appear in their message as structured rows), map the columns to import_sites or import_equipment fields, show them your mapping for confirmation if any column is ambiguous, then import and report imported/skipped counts. Never guess required values that are missing.`;
+
+  const exports: { filename: string; csv: string }[] = [];
 
   try {
     for (let turn = 0; turn < 6; turn++) {
@@ -405,12 +696,27 @@ You can also draft estimates with create_estimate_draft. Rules: check query_cata
         const toolResults: Anthropic.ToolResultBlockParam[] = [];
         for (const block of response.content) {
           if (block.type === "tool_use") {
-            const result = await runTool(
+            let result = await runTool(
               supabase as unknown as SupabaseClient,
               block.name,
               block.input as Json,
               user.id
             );
+            // Exports are handed to the browser, not fed back to the model.
+            if (block.name === "export_data" && result.startsWith("{")) {
+              try {
+                const parsed = JSON.parse(result) as {
+                  __export?: { filename: string; csv: string };
+                  row_count?: number;
+                };
+                if (parsed.__export) {
+                  exports.push(parsed.__export);
+                  result = `export ready: ${parsed.__export.filename} (${parsed.row_count} rows). The user will see a download button — tell them it's ready.`;
+                }
+              } catch {
+                // fall through with raw result
+              }
+            }
             toolResults.push({
               type: "tool_result",
               tool_use_id: block.id,
@@ -427,7 +733,7 @@ You can also draft estimates with create_estimate_draft. Rules: check query_cata
         .filter((b): b is Anthropic.TextBlock => b.type === "text")
         .map((b) => b.text)
         .join("\n");
-      return Response.json({ reply: text || "(no answer)" });
+      return Response.json({ reply: text || "(no answer)", exports });
     }
     return Response.json({
       reply:
