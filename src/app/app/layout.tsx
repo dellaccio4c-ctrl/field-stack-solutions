@@ -62,6 +62,7 @@ export default async function AppLayout({
       label: "Company",
       items: [
         { href: "/app/financials", label: "Financials", min: "owner" },
+        { href: "/app/integrations", label: "Integrations", min: "owner" },
         { href: "/app/team", label: "Team", min: "admin" },
         { href: "/app/dev", label: "Under Development", min: "owner" },
       ],
