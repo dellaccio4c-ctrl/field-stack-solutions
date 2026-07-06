@@ -775,7 +775,10 @@ async function runTool(
 }
 
 export async function POST(req: Request) {
-  if (!process.env.ANTHROPIC_API_KEY)
+  // Vercel env entries sometimes land lowercase — accept either casing.
+  const anthropicKey =
+    process.env.ANTHROPIC_API_KEY || process.env.anthropic_api_key;
+  if (!anthropicKey)
     return Response.json(
       { error: "AI isn't configured yet — add ANTHROPIC_API_KEY." },
       { status: 503 }
@@ -802,7 +805,7 @@ export async function POST(req: Request) {
   if (!history.length)
     return Response.json({ error: "Empty message." }, { status: 400 });
 
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey: anthropicKey });
   const messages: Anthropic.MessageParam[] = history.map((m) => ({
     role: m.role,
     content: m.content,
