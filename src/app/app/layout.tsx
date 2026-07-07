@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { atLeast, type UserRole } from "@/lib/roles";
 import { SignOutButton } from "./signout-button";
+import { MobileNav } from "./mobile-nav";
 
 type NavItem = { href: string; label: string; min: UserRole };
 type NavEntry =
@@ -133,7 +134,7 @@ export default async function AppLayout({
   return (
     <div className="min-h-screen bg-[#f5f7fb]">
       <header className="sticky top-0 z-50 bg-[#0e1f38] border-b border-white/10 print:hidden">
-        <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center gap-8">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-3 md:gap-8">
           <Link href="/app" className="flex items-center gap-2.5 flex-shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -192,15 +193,26 @@ export default async function AppLayout({
             )}
           </nav>
 
-          <div className="flex items-center gap-4 flex-shrink-0 ml-auto">
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 ml-auto">
             <div className="text-white text-sm font-semibold whitespace-nowrap hidden sm:block">
               {displayName}
             </div>
             <SignOutButton />
+            <MobileNav
+              entries={entries.map((e) =>
+                e.kind === "link"
+                  ? { kind: "link" as const, item: { href: e.item.href, label: e.item.label } }
+                  : {
+                      kind: "menu" as const,
+                      label: e.label,
+                      items: e.items.map((i) => ({ href: i.href, label: i.label })),
+                    }
+              )}
+            />
           </div>
         </div>
       </header>
-      <main className="max-w-[1140px] mx-auto px-6 py-8">{children}</main>
+      <main className="max-w-[1140px] mx-auto px-4 sm:px-6 py-6 sm:py-8">{children}</main>
     </div>
   );
 }
