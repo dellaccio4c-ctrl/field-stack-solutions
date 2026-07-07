@@ -9,6 +9,13 @@ type Item = {
   description: string;
   quantity: number;
   unit_price: number;
+  option_tier?: string | null;
+};
+
+const TIER_STYLE: Record<string, string> = {
+  good: "bg-[#eef1f6] text-[#5a6b85]",
+  better: "bg-[#e8f0fd] text-[#2f6fd6]",
+  best: "bg-[#e3f6ec] text-[#1f9d63]",
 };
 
 type CatalogItem = {
@@ -64,7 +71,16 @@ export function LineItemsEditor({
           )}
           {items.map((it) => (
             <tr key={it.id} className="border-b border-[#e4e9f1] last:border-0">
-              <td className="px-5 py-3">{it.description}</td>
+              <td className="px-5 py-3">
+                {it.description}
+                {it.option_tier && (
+                  <span
+                    className={`ml-2 inline-block px-2 py-0.5 rounded-full text-xs font-bold capitalize ${TIER_STYLE[it.option_tier] ?? ""}`}
+                  >
+                    {it.option_tier}
+                  </span>
+                )}
+              </td>
               <td className="px-5 py-3 text-right">{Number(it.quantity)}</td>
               <td className="px-5 py-3 text-right">{money(it.unit_price)}</td>
               <td className="px-5 py-3 text-right font-semibold">
@@ -155,6 +171,21 @@ export function LineItemsEditor({
               required
               className="w-28 border border-[#e4e9f1] rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#ff8a1e]"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#5a6b85] mb-1">
+              Option
+            </label>
+            <select
+              name="option_tier"
+              defaultValue=""
+              className="w-28 border border-[#e4e9f1] rounded-lg px-2 py-2 bg-white focus:outline-none focus:border-[#ff8a1e]"
+            >
+              <option value="">All options</option>
+              <option value="good">Good</option>
+              <option value="better">Better</option>
+              <option value="best">Best</option>
+            </select>
           </div>
           <button
             type="submit"

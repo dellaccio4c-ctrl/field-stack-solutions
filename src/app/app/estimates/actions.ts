@@ -31,11 +31,13 @@ export async function createEstimate(formData: FormData) {
 
 export async function addEstimateItem(estimateId: string, formData: FormData) {
   const supabase = await createClient();
+  const tier = String(formData.get("option_tier") ?? "");
   const { error } = await supabase.from("line_items").insert({
     estimate_id: estimateId,
     description: String(formData.get("description") ?? "").trim(),
     quantity: parseFloat(String(formData.get("quantity") || "1")),
     unit_price: parseFloat(String(formData.get("unit_price") || "0")),
+    option_tier: ["good", "better", "best"].includes(tier) ? tier : null,
   });
   if (error) return { error: error.message };
   revalidatePath(`/app/estimates/${estimateId}`);
@@ -166,13 +168,20 @@ export async function setEstimateStatus(estimateId: string, status: string) {
 export async function customerDecideEstimate(
   estimateId: string,
   decision: "approved" | "declined",
-  signature?: { name: string; data: string }
+  signature?: { name: string; data: string },
+  selectedOption?: string
 ) {
   const supabase = await createClient();
   const patch: Record<string, unknown> = {
     status: decision,
     decided_at: new Date().toISOString(),
   };
+  if (
+    decision === "approved" &&
+    selectedOption &&
+    ["good", "better", "best"].includes(selectedOption)
+  )
+    patch.selected_option = selectedOption;
   if (decision === "approved" && signature) {
     if (!signature.name.trim())
       return { error: "Please type your name to sign." };
@@ -254,9 +263,14 @@ export async function convertToInvoice(estimateId: string) {
     .single();
   if (invErr) return { error: invErr.message };
 
-  if (est.line_items?.length) {
+  // With Good/Better/Best, only shared lines + the chosen tier convert.
+  const convertibleLines = (est.line_items ?? []).filter(
+    (li: { option_tier: string | null }) =>
+      !li.option_tier || li.option_tier === est.selected_option
+  );
+  if (convertibleLines.length) {
     const { error: itemsErr } = await supabase.from("line_items").insert(
-      est.line_items.map(
+      convertibleLines.map(
         (li: {
           description: string;
           quantity: number;

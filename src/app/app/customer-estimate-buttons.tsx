@@ -48,11 +48,18 @@ function SignaturePad({ padRef }: { padRef: React.RefObject<HTMLCanvasElement | 
   );
 }
 
-export function CustomerEstimateButtons({ estimateId }: { estimateId: string }) {
+export function CustomerEstimateButtons({
+  estimateId,
+  options = [],
+}: {
+  estimateId: string;
+  options?: { tier: string; total: number }[];
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signOpen, setSignOpen] = useState(false);
   const [name, setName] = useState("");
+  const [tier, setTier] = useState("");
   const padRef = useRef<HTMLCanvasElement | null>(null);
 
   async function decline() {
@@ -74,13 +81,16 @@ export function CustomerEstimateButtons({ estimateId }: { estimateId: string }) 
   async function approveSigned() {
     const canvas = padRef.current;
     setError(null);
+    if (options.length && !tier) return setError("Pick an option first.");
     if (!name.trim()) return setError("Type your full name.");
     if (!canvas || padIsEmpty(canvas)) return setError("Please draw your signature.");
     setBusy(true);
-    const result = await customerDecideEstimate(estimateId, "approved", {
-      name,
-      data: canvas.toDataURL("image/png"),
-    });
+    const result = await customerDecideEstimate(
+      estimateId,
+      "approved",
+      { name, data: canvas.toDataURL("image/png") },
+      tier || undefined
+    );
     setBusy(false);
     if (result.error) return setError(result.error);
     setSignOpen(false);
@@ -114,6 +124,34 @@ export function CustomerEstimateButtons({ estimateId }: { estimateId: string }) 
               Type your name and sign below to approve the work described in
               this estimate.
             </p>
+            {options.length > 0 && (
+              <div className="mb-4">
+                <div className="text-xs font-semibold text-[#5a6b85] mb-2">
+                  Choose your option
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {options.map((o) => (
+                    <button
+                      key={o.tier}
+                      type="button"
+                      onClick={() => setTier(o.tier)}
+                      className={`rounded-xl border p-3 text-left transition ${
+                        tier === o.tier
+                          ? "border-[#1f9d63] ring-1 ring-[#1f9d63] bg-[#f2fbf6]"
+                          : "border-[#e4e9f1] hover:border-[#ff8a1e]"
+                      }`}
+                    >
+                      <div className="text-xs font-bold uppercase tracking-wider text-[#5a6b85] capitalize">
+                        {o.tier}
+                      </div>
+                      <div className="font-extrabold text-[#0e1726]">
+                        ${o.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <label className="block text-xs font-semibold text-[#5a6b85] mb-3">
               Full name
               <input

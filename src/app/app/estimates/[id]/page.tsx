@@ -19,7 +19,7 @@ export default async function EstimateDetailPage({
   const { data: est } = await supabase
     .from("estimates")
     .select(
-      "*, customers(name), locations(label), line_items(id, description, quantity, unit_price, sort_order)"
+      "*, customers(name), locations(label), line_items(id, description, quantity, unit_price, sort_order, option_tier)"
     )
     .eq("id", id)
     .single();
@@ -141,22 +141,60 @@ export default async function EstimateDetailPage({
         catalog={catalog ?? []}
       />
 
-      <div className="mt-6 flex justify-end">
-        <div className="bg-white rounded-2xl border border-[#e4e9f1] p-5 w-72 space-y-2 text-sm shadow-sm">
-          <div className="flex justify-between text-[#5a6b85]">
-            <span>Subtotal</span>
-            <span>{money(sub)}</span>
+      {(() => {
+        type Li = { quantity: number; unit_price: number; option_tier?: string | null };
+        const tiers = ["good", "better", "best"].filter((t) =>
+          items.some((i: Li) => i.option_tier === t)
+        );
+        if (tiers.length === 0)
+          return (
+            <div className="mt-6 flex justify-end">
+              <div className="bg-white rounded-2xl border border-[#e4e9f1] p-5 w-72 space-y-2 text-sm shadow-sm">
+                <div className="flex justify-between text-[#5a6b85]">
+                  <span>Subtotal</span>
+                  <span>{money(sub)}</span>
+                </div>
+                <div className="flex justify-between text-[#5a6b85]">
+                  <span>Tax ({(Number(est.tax_rate) * 100).toFixed(2)}%)</span>
+                  <span>{money(tax)}</span>
+                </div>
+                <div className="flex justify-between font-extrabold text-[#0e1726] text-base border-t border-[#e4e9f1] pt-2">
+                  <span>Total</span>
+                  <span>{money(sub + tax)}</span>
+                </div>
+              </div>
+            </div>
+          );
+        const tierTotal = (t: string) => {
+          const s = subtotal(
+            items.filter((i: Li) => !i.option_tier || i.option_tier === t)
+          );
+          return s * (1 + Number(est.tax_rate));
+        };
+        return (
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {tiers.map((t) => (
+              <div
+                key={t}
+                className={`bg-white rounded-2xl border p-5 text-sm shadow-sm ${
+                  est.selected_option === t
+                    ? "border-[#1f9d63] ring-1 ring-[#1f9d63]"
+                    : "border-[#e4e9f1]"
+                }`}
+              >
+                <div className="text-xs font-bold tracking-wider uppercase text-[#5a6b85] mb-1 capitalize">
+                  {t} option
+                  {est.selected_option === t ? " · customer's pick ✓" : ""}
+                </div>
+                <div className="text-xl font-extrabold text-[#0e1726]">
+                  {money(tierTotal(t))}
+                </div>
+                <div className="text-xs text-[#5a6b85]">incl. tax + shared items</div>
+              </div>
+            ))}
           </div>
-          <div className="flex justify-between text-[#5a6b85]">
-            <span>Tax ({(Number(est.tax_rate) * 100).toFixed(2)}%)</span>
-            <span>{money(tax)}</span>
-          </div>
-          <div className="flex justify-between font-extrabold text-[#0e1726] text-base border-t border-[#e4e9f1] pt-2">
-            <span>Total</span>
-            <span>{money(sub + tax)}</span>
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {est.notes && (
         <div className="bg-[#fff2e3] rounded-2xl p-5 mt-6 text-sm text-[#0e1726]">

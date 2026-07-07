@@ -16,7 +16,7 @@ export async function CustomerDashboard({
     await Promise.all([
       supabase
         .from("estimates")
-        .select("id, number, title, status, tax_rate, locations(label), line_items(quantity, unit_price)")
+        .select("id, number, title, status, tax_rate, locations(label), line_items(quantity, unit_price, option_tier)")
         .eq("customer_id", customerId)
         .order("created_at", { ascending: false }),
       supabase
@@ -78,8 +78,17 @@ export async function CustomerDashboard({
           </h2>
           <div className="space-y-3">
             {pendingEstimates.map((e) => {
-              const total =
-                subtotal(e.line_items ?? []) * (1 + Number(e.tax_rate));
+              type Li = { quantity: number; unit_price: number; option_tier?: string | null };
+              const lines = (e.line_items ?? []) as Li[];
+              const total = subtotal(lines) * (1 + Number(e.tax_rate));
+              const options = ["good", "better", "best"]
+                .filter((t) => lines.some((l) => l.option_tier === t))
+                .map((t) => ({
+                  tier: t,
+                  total:
+                    subtotal(lines.filter((l) => !l.option_tier || l.option_tier === t)) *
+                    (1 + Number(e.tax_rate)),
+                }));
               return (
                 <div
                   key={e.id}
@@ -92,10 +101,15 @@ export async function CustomerDashboard({
                     <div className="text-sm text-[#5a6b85]">
                       {(e.locations as unknown as { label: string } | null)
                         ?.label ?? ""}{" "}
-                      · {money(total)}
+                      ·{" "}
+                      {options.length
+                        ? options
+                            .map((o) => `${o.tier[0].toUpperCase()}${o.tier.slice(1)} ${money(o.total)}`)
+                            .join(" / ")
+                        : money(total)}
                     </div>
                   </div>
-                  <CustomerEstimateButtons estimateId={e.id} />
+                  <CustomerEstimateButtons estimateId={e.id} options={options} />
                 </div>
               );
             })}
