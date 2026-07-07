@@ -32,6 +32,10 @@ export default function PumpMap({ sites }: { sites: PumpSite[] }) {
         zoom={9}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={false}
+        dragging={
+          typeof window === "undefined" ||
+          !window.matchMedia("(pointer: coarse)").matches
+        }
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

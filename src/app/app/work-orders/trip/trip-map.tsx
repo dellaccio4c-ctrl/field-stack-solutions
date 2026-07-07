@@ -33,6 +33,10 @@ export default function TripMap({ orders }: { orders: TripOrder[] }) {
         zoom={7}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={false}
+        dragging={
+          typeof window === "undefined" ||
+          !window.matchMedia("(pointer: coarse)").matches
+        }
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

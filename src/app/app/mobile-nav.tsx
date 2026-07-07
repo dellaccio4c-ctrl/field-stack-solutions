@@ -13,18 +13,12 @@ export function MobileNav({ entries }: { entries: Entry[] }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close the menu whenever navigation happens.
+  // Close the menu whenever navigation happens. (No body scroll-lock —
+  // it can stick and freeze page scrolling; the overlay covering the
+  // content is enough.)
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
-
-  // Don't let the page scroll behind the open menu.
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
 
   return (
     <div className="md:hidden">
