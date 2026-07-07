@@ -165,12 +165,29 @@ export async function setEstimateStatus(estimateId: string, status: string) {
 // estimates while they are in 'sent' status.
 export async function customerDecideEstimate(
   estimateId: string,
-  decision: "approved" | "declined"
+  decision: "approved" | "declined",
+  signature?: { name: string; data: string }
 ) {
   const supabase = await createClient();
+  const patch: Record<string, unknown> = {
+    status: decision,
+    decided_at: new Date().toISOString(),
+  };
+  if (decision === "approved" && signature) {
+    if (!signature.name.trim())
+      return { error: "Please type your name to sign." };
+    if (
+      !signature.data.startsWith("data:image/png;base64,") ||
+      signature.data.length > 200000
+    )
+      return { error: "Signature didn't capture — please try again." };
+    patch.signed_by_name = signature.name.trim().slice(0, 120);
+    patch.signature_data = signature.data;
+    patch.signed_at = new Date().toISOString();
+  }
   const { error } = await supabase
     .from("estimates")
-    .update({ status: decision, decided_at: new Date().toISOString() })
+    .update(patch)
     .eq("id", estimateId);
   if (error) return { error: error.message };
   revalidatePath("/app");

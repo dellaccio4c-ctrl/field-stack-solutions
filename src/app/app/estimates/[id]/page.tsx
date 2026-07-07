@@ -113,6 +113,27 @@ export default async function EstimateDetailPage({
         canApprove={canApprove}
       />
 
+      {est.signed_by_name && (
+        <div className="bg-[#e3f6ec] border border-[#bfe6d2] rounded-2xl p-4 mb-6 flex items-center gap-4 flex-wrap">
+          <div className="text-sm text-[#0e1726]">
+            <span className="font-bold">✓ Signed by {est.signed_by_name}</span>
+            {est.signed_at && (
+              <span className="text-[#5a6b85]">
+                {" "}· {new Date(est.signed_at).toLocaleString()}
+              </span>
+            )}
+          </div>
+          {est.signature_data && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={est.signature_data}
+              alt={`Signature of ${est.signed_by_name}`}
+              className="h-12 bg-white border border-[#e4e9f1] rounded-lg px-2"
+            />
+          )}
+        </div>
+      )}
+
       <LineItemsEditor
         estimateId={est.id}
         items={items}
