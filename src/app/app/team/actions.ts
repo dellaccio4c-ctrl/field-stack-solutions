@@ -101,6 +101,44 @@ export async function inviteUser(formData: FormData) {
   return { error: null, inviteLink: inviteUrl, emailed };
 }
 
+// Fresh sign-in link for an EXISTING member (original invite expired or
+// never arrived). Magic-link type works for already-created users.
+export async function resendInvite(email: string) {
+  if (!adminConfigured())
+    return { error: "Not configured.", inviteLink: null, emailed: false };
+  const rank = await actorRank();
+  if (rank < 4)
+    return {
+      error: "Only Admins and Owners can resend invites.",
+      inviteLink: null,
+      emailed: false,
+    };
+
+  const { headers } = await import("next/headers");
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
+
+  const admin = createAdminClient();
+  const { data: linkData, error: linkErr } =
+    await admin.auth.admin.generateLink({ type: "magiclink", email });
+  if (linkErr)
+    return { error: linkErr.message, inviteLink: null, emailed: false };
+
+  const inviteUrl = `${origin}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=magiclink&next=/welcome`;
+
+  const { sendWelcomeEmail, emailConfigured } = await import("@/lib/email");
+  let emailed = false;
+  if (emailConfigured()) {
+    const result = await sendWelcomeEmail({
+      to: email,
+      name: "",
+      link: inviteUrl,
+    });
+    emailed = !result.error;
+  }
+  return { error: null, inviteLink: inviteUrl, emailed };
+}
+
 export async function changeRole(userId: string, role: UserRole) {
   // Regular client — the database trigger enforces the ladder rules
   // (no self-change, only higher ranks can promote/demote).

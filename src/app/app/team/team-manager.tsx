@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { inviteUser, changeRole, setActive, updateEmployee } from "./actions";
+import { inviteUser, changeRole, setActive, updateEmployee, resendInvite } from "./actions";
 import { ROLE_LABEL, ROLE_RANK, type UserRole } from "@/lib/roles";
 
 type Member = {
@@ -285,6 +285,23 @@ export function TeamManager({
                     >
                       Edit
                     </button>
+                    {canManage && (
+                      <button
+                        onClick={async () => {
+                          setError(null);
+                          const r = await resendInvite(m.email);
+                          if (r.error) return setError(r.error);
+                          setInviteResult({
+                            email: m.email,
+                            link: r.inviteLink!,
+                            emailed: r.emailed,
+                          });
+                        }}
+                        className="text-[#b9700f] font-semibold hover:underline"
+                      >
+                        New invite link
+                      </button>
+                    )}
                     {canManage && (
                       <button
                         onClick={() => setActive(m.id, !m.is_active)}
