@@ -15,7 +15,19 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => setReady(!!user));
+    (async () => {
+      // The reset link can land here with ?code= (PKCE) — exchange it for a
+      // session first, then confirm we're signed in.
+      const code = new URLSearchParams(window.location.search).get("code");
+      if (code) {
+        await supabase.auth.exchangeCodeForSession(code).catch(() => {});
+        window.history.replaceState({}, "", "/reset-password");
+      }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setReady(!!user);
+    })();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {

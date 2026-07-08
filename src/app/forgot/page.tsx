@@ -15,8 +15,10 @@ export default function ForgotPasswordPage() {
     setError(null);
     setLoading(true);
     const supabase = createClient();
+    // Queryless redirect — Supabase's whitelist strips redirect URLs that
+    // carry their own query string, dumping users on the homepage.
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     setLoading(false);
     if (error) {
