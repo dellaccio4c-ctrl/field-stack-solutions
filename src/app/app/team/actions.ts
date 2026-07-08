@@ -67,6 +67,10 @@ export async function inviteUser(formData: FormData) {
     });
   if (linkErr) return { error: linkErr.message, inviteLink: null, emailed: false };
 
+  // token_hash link verified server-side at /auth/confirm — works in any
+  // browser (the ?code= flow fails for invitees who lack the PKCE cookie).
+  const inviteUrl = `${origin}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=invite&next=/welcome`;
+
   const { error: roleErr } = await admin
     .from("profiles")
     .update({
@@ -88,13 +92,13 @@ export async function inviteUser(formData: FormData) {
     const result = await sendWelcomeEmail({
       to: email,
       name: legalFirst || fullName,
-      link: linkData.properties.action_link,
+      link: inviteUrl,
     });
     emailed = !result.error;
   }
 
   revalidatePath("/app/team");
-  return { error: null, inviteLink: linkData.properties.action_link, emailed };
+  return { error: null, inviteLink: inviteUrl, emailed };
 }
 
 export async function changeRole(userId: string, role: UserRole) {

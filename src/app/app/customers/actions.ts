@@ -146,6 +146,10 @@ export async function createCustomerLogin(
     });
   if (linkErr) return { error: linkErr.message, inviteLink: null, emailed: false };
 
+  // token_hash link verified server-side at /auth/confirm — works in any
+  // browser (the ?code= flow fails for invitees who lack the PKCE cookie).
+  const inviteUrl = `${origin}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=invite&next=/welcome`;
+
   const { error: profErr } = await admin
     .from("profiles")
     .update({ role: "customer", customer_id: customerId, full_name: fullName })
@@ -158,14 +162,14 @@ export async function createCustomerLogin(
     const result = await sendWelcomeEmail({
       to: email,
       name: fullName,
-      link: linkData.properties.action_link,
+      link: inviteUrl,
       isCustomer: true,
     });
     emailed = !result.error;
   }
 
   revalidatePath(`/app/customers/${customerId}`);
-  return { error: null, inviteLink: linkData.properties.action_link, emailed };
+  return { error: null, inviteLink: inviteUrl, emailed };
 }
 
 export async function deleteLocation(customerId: string, locationId: string) {
