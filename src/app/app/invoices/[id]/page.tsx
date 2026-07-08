@@ -149,7 +149,7 @@ export default async function InvoiceDetailPage({
           <h2 className="text-lg font-extrabold text-[#0e1726] mb-3">
             Payment history
           </h2>
-          <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[#5a6b85] border-b border-[#e4e9f1] bg-[#f5f7fb]">

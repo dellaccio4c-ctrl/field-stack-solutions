@@ -120,7 +120,7 @@ export default async function NetworkPage() {
             All work orders →
           </Link>
         </div>
-        <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-x-auto">
           {!networkWOs?.length ? (
             <div className="p-6 text-center text-[#5a6b85] text-sm">
               No network work orders yet — create one from Work Orders with type

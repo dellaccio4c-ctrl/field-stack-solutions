@@ -122,7 +122,7 @@ export async function CustomerDashboard({
           <h2 className="text-lg font-extrabold text-[#0e1726] mb-3">
             Open invoices
           </h2>
-          <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-x-auto">
             {!openInvoices.length ? (
               <div className="p-6 text-center text-[#5a6b85] text-sm">
                 No open invoices — you&apos;re all caught up.
@@ -177,7 +177,7 @@ export async function CustomerDashboard({
           <h2 className="text-lg font-extrabold text-[#0e1726] mb-3">
             Totals by site
           </h2>
-          <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[#5a6b85] border-b border-[#e4e9f1] bg-[#f5f7fb]">

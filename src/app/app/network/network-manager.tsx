@@ -207,7 +207,7 @@ export function NetworkManager({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search provider, site, device, serial, IP…"
-          className="border border-[#e4e9f1] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#ff8a1e] w-72"
+          className="border border-[#e4e9f1] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#ff8a1e] w-full sm:w-72"
         />
         <div className="grow" />
         <button
@@ -345,7 +345,7 @@ export function NetworkManager({
                   </select>
                 </label>
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <label className={labelCls}>
                   Down (Mbps)
                   <input name="download_mbps" type="number" defaultValue={editCircuit === "new" ? "" : editCircuit.download_mbps ?? ""} className={inputCls} />
@@ -367,7 +367,7 @@ export function NetworkManager({
                   <input name="install_date" type="date" defaultValue={editCircuit === "new" ? "" : editCircuit.install_date ?? ""} className={inputCls} />
                 </label>
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <label className={labelCls}>
                   Static IP
                   <input name="static_ip" defaultValue={editCircuit === "new" ? "" : editCircuit.static_ip ?? ""} className={inputCls} />
@@ -448,7 +448,7 @@ export function NetworkManager({
                   </select>
                 </label>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <label className={labelCls}>
                   Brand
                   <input name="brand" defaultValue={editDevice === "new" ? "" : editDevice.brand ?? ""} placeholder="Ubiquiti, Cisco…" className={inputCls} />
@@ -462,7 +462,7 @@ export function NetworkManager({
                   <input name="serial_number" defaultValue={editDevice === "new" ? "" : editDevice.serial_number ?? ""} className={inputCls} />
                 </label>
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <label className={labelCls}>
                   MAC address
                   <input name="mac_address" defaultValue={editDevice === "new" ? "" : editDevice.mac_address ?? ""} className={inputCls} />

@@ -255,7 +255,7 @@ export default async function FinancialsPage() {
           <h2 className="text-lg font-extrabold text-[#0e1726] mb-3">
             Recent payments
           </h2>
-          <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-x-auto">
             {!payments?.length ? (
               <div className="p-6 text-center text-[#5a6b85] text-sm">
                 No payments yet.
@@ -294,7 +294,7 @@ export default async function FinancialsPage() {
           <h2 className="text-lg font-extrabold text-[#0e1726] mb-3">
             Recent expenses
           </h2>
-          <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-x-auto">
             {!expenses?.length ? (
               <div className="p-6 text-center text-[#5a6b85] text-sm">
                 No expenses recorded yet.

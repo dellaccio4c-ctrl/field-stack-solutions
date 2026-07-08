@@ -91,7 +91,7 @@ export default async function VendorPartsPage({
       {isOwner && <MarkupSettings current={markup} />}
 
       <form method="get" className="flex flex-wrap items-end gap-3 mb-5 bg-white rounded-2xl border border-[#e4e9f1] p-4">
-        <label className="text-xs font-semibold text-[#5a6b85] grow max-w-md">
+        <label className="text-xs font-semibold text-[#5a6b85] grow w-full sm:max-w-md">
           Search
           <input
             name="q"

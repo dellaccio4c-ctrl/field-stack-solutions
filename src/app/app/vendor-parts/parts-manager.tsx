@@ -188,7 +188,7 @@ export function PartsManager({ parts, markup }: { parts: Part[]; markup: number 
               {edit === "new" ? "Add part" : "Edit part"}
             </h2>
             <form action={submit} className="space-y-4">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <label className={labelCls}>
                   Vendor *
                   <input name="vendor" required defaultValue={edit === "new" ? "" : edit.vendor} placeholder="Grainger" className={inputCls} />
@@ -210,7 +210,7 @@ export function PartsManager({ parts, markup }: { parts: Part[]; markup: number 
                 Description
                 <textarea name="description" rows={2} defaultValue={edit === "new" ? "" : edit.description ?? ""} className={inputCls} />
               </label>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <label className={labelCls}>
                   Category
                   <input name="category" defaultValue={edit === "new" ? "" : edit.category ?? ""} className={inputCls} />

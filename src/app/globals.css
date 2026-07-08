@@ -33,3 +33,14 @@ textarea {
   z-index: 0;
   isolation: isolate;
 }
+
+/* iOS Safari zoom-jumps into any input under 16px. Most of our forms use
+   text-sm (14px) — force 16px on touch-first screens so no field anywhere
+   triggers the zoom. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

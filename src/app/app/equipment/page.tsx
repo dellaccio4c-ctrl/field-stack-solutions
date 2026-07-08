@@ -50,7 +50,7 @@ export default async function EquipmentPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search serial, unit #, brand…"
-          className="border border-[#e4e9f1] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#ff8a1e] w-64"
+          className="border border-[#e4e9f1] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#ff8a1e] w-full sm:w-64"
         />
         <select
           name="customer"

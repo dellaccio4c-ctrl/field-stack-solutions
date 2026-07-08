@@ -212,7 +212,7 @@ export default async function SiteDetailPage({
             ({openWOs.length} open)
           </span>
         </h2>
-        <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-[#e4e9f1] shadow-sm overflow-x-auto">
           {!workOrders?.length ? (
             <div className="p-6 text-center text-[#5a6b85] text-sm">
               No work orders at this site yet.

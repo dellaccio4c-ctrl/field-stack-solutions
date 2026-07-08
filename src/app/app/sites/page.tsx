@@ -175,7 +175,7 @@ export default async function SitesPage({
             className="block mt-1 border border-[#e4e9f1] rounded-lg px-3 py-2 text-sm bg-white font-normal text-[#0e1726] focus:outline-none focus:border-[#ff8a1e] w-28"
           />
         </label>
-        <label className="text-xs font-semibold text-[#5a6b85] grow max-w-72">
+        <label className="text-xs font-semibold text-[#5a6b85] grow w-full sm:max-w-72">
           Search
           <input
             name="q"

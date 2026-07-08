@@ -124,7 +124,7 @@ export function ProfileForm({
         </div>
         {extended && (
           <>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <F
                 label="Employee code"
                 value={form.employee_code ?? ""}
