@@ -54,9 +54,12 @@ function LoginForm() {
             <input
               type="email"
               required
+              autoComplete="email"
+              inputMode="email"
+              autoCapitalize="none"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2.5 text-[#0e1726] focus:outline-none focus:border-[#ff8a1e]"
+              className="w-full border border-[#e4e9f1] rounded-lg px-3 py-3 text-base text-[#0e1726] focus:outline-none focus:border-[#ff8a1e]"
             />
           </div>
           <div>
@@ -66,9 +69,10 @@ function LoginForm() {
             <input
               type="password"
               required
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2.5 text-[#0e1726] focus:outline-none focus:border-[#ff8a1e]"
+              className="w-full border border-[#e4e9f1] rounded-lg px-3 py-3 text-base text-[#0e1726] focus:outline-none focus:border-[#ff8a1e]"
             />
           </div>
           {error && (

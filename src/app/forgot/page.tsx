@@ -47,8 +47,9 @@ export default function ForgotPasswordPage() {
           <div>
             <div className="text-sm text-[#1f9d63] bg-[#e3f6ec] rounded-lg px-3 py-3 mb-4">
               If an account exists for <b>{email}</b>, a reset link is on its
-              way. Open it <b>on this device</b> and you&apos;ll be taken to
-              set a new password.
+              way. <b>On your phone:</b> when the email arrives, press and hold
+              the button and choose &quot;Open in browser&quot; (or copy the
+              link into this browser) — then set your new password.
             </div>
             <Link
               href="/login"
@@ -70,9 +71,12 @@ export default function ForgotPasswordPage() {
               <input
                 type="email"
                 required
+                autoComplete="email"
+                inputMode="email"
+                autoCapitalize="none"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2.5 text-[#0e1726] focus:outline-none focus:border-[#ff8a1e]"
+                className="w-full border border-[#e4e9f1] rounded-lg px-3 py-3 text-base text-[#0e1726] focus:outline-none focus:border-[#ff8a1e]"
               />
             </div>
             {error && (

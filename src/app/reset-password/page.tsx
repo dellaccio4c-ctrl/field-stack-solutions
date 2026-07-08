@@ -61,18 +61,21 @@ export default function ResetPasswordPage() {
         </div>
 
         {ready === null ? (
-          <p className="text-sm text-[#5a6b85]">Checking your reset link…</p>
+          <p className="text-base text-[#5a6b85]">Checking your reset link…</p>
         ) : !ready ? (
           <div>
-            <div className="text-sm text-[#d24b4b] bg-[#fbe7e7] rounded-lg px-3 py-3 mb-4">
-              This reset link is invalid or has expired — links work once and
-              expire after a while. Request a fresh one below.
+            <div className="text-[15px] text-[#0e1726] bg-[#fff2e3] rounded-lg px-4 py-3 mb-4 leading-relaxed">
+              <b>This link couldn&apos;t be opened here.</b> That usually means
+              it was opened in a different app or browser than the one that
+              requested it (for example, tapping the link inside the Gmail
+              app). Easiest fix: tap below and request the reset{" "}
+              <b>right here</b> — then open the new email on this same screen.
             </div>
             <Link
               href="/forgot"
-              className="block text-center bg-[#ff8a1e] hover:bg-[#ffa347] text-white font-semibold rounded-lg py-3 transition"
+              className="block text-center bg-[#ff8a1e] hover:bg-[#ffa347] text-white font-semibold rounded-lg py-3.5 text-base transition"
             >
-              Request a new reset link
+              Send me a new reset link
             </Link>
           </div>
         ) : (
@@ -85,9 +88,10 @@ export default function ResetPasswordPage() {
                 type="password"
                 required
                 minLength={8}
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2.5 text-[#0e1726] focus:outline-none focus:border-[#ff8a1e]"
+                className="w-full border border-[#e4e9f1] rounded-lg px-3 py-3 text-base text-[#0e1726] focus:outline-none focus:border-[#ff8a1e]"
               />
             </div>
             <div>
@@ -98,9 +102,10 @@ export default function ResetPasswordPage() {
                 type="password"
                 required
                 minLength={8}
+                autoComplete="new-password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className="w-full border border-[#e4e9f1] rounded-lg px-3 py-2.5 text-[#0e1726] focus:outline-none focus:border-[#ff8a1e]"
+                className="w-full border border-[#e4e9f1] rounded-lg px-3 py-3 text-base text-[#0e1726] focus:outline-none focus:border-[#ff8a1e]"
               />
             </div>
             {error && (
