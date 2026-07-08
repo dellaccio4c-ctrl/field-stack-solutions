@@ -137,7 +137,7 @@ export default async function AppLayout({
     <div className="min-h-screen bg-[#f5f7fb]">
       <header className="sticky top-0 z-50 bg-[#0e1f38] border-b border-white/10 print:hidden">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-3 md:gap-8">
-          <Link href="/app" className="flex items-center gap-2.5 flex-shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/brand/fss-badge-navy.png"
