@@ -83,6 +83,12 @@ function LoginForm() {
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
+          <a
+            href="/forgot"
+            className="block text-center text-sm font-semibold text-[#b9700f] hover:underline"
+          >
+            Forgot password?
+          </a>
         </form>
         <p className="text-xs text-[#5a6b85] mt-6 text-center">
           Accounts are created by your administrator.
