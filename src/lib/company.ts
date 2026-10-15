@@ -4,6 +4,6 @@ export const COMPANY = {
   tagline: "Technology & Facility Services for Multi-Site Operators",
   website: "fieldstacksolutions.com",
   email: "info@fieldstacksolutions.com",
-  phone: "(205) 887-0777",
+  phone: "",
   address: "Vestavia Hills, Alabama",
 };
